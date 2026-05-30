@@ -13,17 +13,17 @@
 
 Goal: `498270` ETF를 대상으로 에이전트 회의 결과를 생성하고 paper Trade Ticket을 기록한다.
 
-Tasks:
+Current implementation status:
 
-1. Define common agent input/output dataclasses.
-2. Implement Chief Investment Agent orchestration.
-3. Implement deterministic Market Analysis Agent stub.
-4. Implement Stock Recommendation Agent for one-symbol universe.
-5. Implement Trading Strategy Agent that can create a candidate ticket.
-6. Implement Risk Management Agent policy checks.
-7. Implement Paper Trade Execution Agent.
-8. Produce Telegram-ready report text.
-9. Persist workflow result to SQLite.
+- Common agent input/output dataclasses: done
+- Chief Investment Agent orchestration: done
+- Deterministic Market Analysis Agent stub: done
+- Stock Recommendation Agent for one-symbol universe: done
+- Trading Strategy Agent candidate ticket generation: done
+- Risk Management Agent policy checks: done
+- Paper Trade Execution Agent: done
+- Telegram-ready report text: initial CLI report done
+- SQLite decision-trail persistence: agent run, trade ticket, risk review done
 
 Verification:
 
@@ -31,6 +31,8 @@ Verification:
 python3 -m app.main
 python3 -m unittest discover -s tests
 ```
+
+Expected result: CLI prints a Chief Investment Agent report and the test suite passes.
 
 ## MVP 2 — Kiwoom Read API Integration
 

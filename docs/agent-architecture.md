@@ -70,6 +70,7 @@ Trade Ticket 심사, 주문 수량/금액 축소, 주문 거부, 리스크 사�
 5. Risk Management Agent approves, adjusts, or rejects the ticket.
 6. Chief Agent produces final Telegram-ready report.
 7. Trade Execution Agent records a paper order only if approved.
+8. TradingRepository persists the agent run, Trade Ticket, and risk review to SQLite.
 
 ## Storage Requirements
 
