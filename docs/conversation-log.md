@@ -68,3 +68,14 @@ Scheduler → Market Data Collector → Strategy Engine → Risk Guard → Order
 > `498270 KIWOOM 미국양자컴퓨팅 ETF`에 대해 멀티 에이전트가 분석 회의를 수행하고, 주문 후보 티켓을 만들고, 텔레그램으로 승인 요청을 보내는 PoC.
 
 초기 모드는 `paper`이며 실제 주문은 하지 않는다.
+
+<!-- AUTO_SYNC_STATUS_START -->
+## Auto Sync Status
+
+이 파일 외에 전체 원문 대화 로그는 `docs/telegram-thread-502-full-log.md`에 자동 저장됩니다.
+
+- Last synced: 2026-05-31 08:36:12 UTC+09:00
+- Synced sessions: 1
+- Synced messages: 16
+- Sync method: Hermes cron job `Kiwoom thread 502 auto GitHub sync`
+<!-- AUTO_SYNC_STATUS_END -->
