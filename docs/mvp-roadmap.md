@@ -36,7 +36,29 @@ Expected result: CLI prints a Chief Investment Agent report and the test suite p
 
 ## MVP 2 — Kiwoom Read API Integration
 
-Kiwoom auth client, account balance lookup, current price lookup for `498270`, market/account snapshot 저장.
+Goal: 키움 REST API 인증, 계좌 조회, 현재가 조회를 붙인다.
+
+Current implementation status:
+
+- Environment settings loader: done (`app/config/settings.py`)
+- Safe `.env.example`: done
+- Kiwoom auth/client/market/account skeleton: done
+- Transport-injected tests without real credentials: done
+- Manual read-check script: done (`scripts/check_kiwoom_read_api.py`)
+
+User-required blocker before real API verification:
+
+- Fill local `.env` with real Kiwoom REST API credentials. Do not commit `.env`.
+
+Manual verification after credentials are available:
+
+```bash
+cp .env.example .env
+# edit .env with real KIWOOM_APP_KEY, KIWOOM_SECRET_KEY, KIWOOM_ACCOUNT_NO
+python3 scripts/check_kiwoom_read_api.py
+```
+
+Expected result: token is issued, `498270` current price is printed, account balance is printed.
 
 ## MVP 3 — Telegram Approval Flow
 
