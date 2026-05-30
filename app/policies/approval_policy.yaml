@@ -1,0 +1,8 @@
+approval:
+  paper:
+    require_user_approval: false
+  live_manual:
+    require_user_approval: true
+  live_auto:
+    require_user_approval: false
+    enabled: false

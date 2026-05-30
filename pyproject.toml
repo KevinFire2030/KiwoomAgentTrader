@@ -1,0 +1,6 @@
+[project]
+name = "kiwoom-agent-trader"
+version = "0.1.0"
+description = "Multi-agent trading decision and execution system for Kiwoom REST API"
+requires-python = ">=3.12"
+dependencies = []

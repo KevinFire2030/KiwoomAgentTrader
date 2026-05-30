@@ -1,0 +1,31 @@
+agents:
+  market_analysis_agent:
+    can_read_market_data: true
+    can_read_account: false
+    can_create_trade_ticket: false
+    can_approve_risk: false
+    can_execute_order: false
+  stock_recommendation_agent:
+    can_read_market_data: true
+    can_read_account_summary: true
+    can_create_trade_ticket: false
+    can_approve_risk: false
+    can_execute_order: false
+  trading_strategy_agent:
+    can_read_market_data: true
+    can_read_positions: true
+    can_create_trade_ticket: true
+    can_approve_risk: false
+    can_execute_order: false
+  risk_management_agent:
+    can_read_account: true
+    can_read_positions: true
+    can_read_orders: true
+    can_create_trade_ticket: false
+    can_approve_risk: true
+    can_execute_order: false
+  trade_execution_agent:
+    can_read_account: true
+    can_read_approved_tickets: true
+    can_execute_order: true
+    can_cancel_order: true
