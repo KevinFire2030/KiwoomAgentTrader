@@ -97,6 +97,13 @@ CREATE TABLE IF NOT EXISTS order_events (
     message TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS runtime_state (
+    state_key TEXT PRIMARY KEY,
+    state_value TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -307,6 +314,55 @@ class TradingRepository:
     def get_order_events(self, ticket_id: str) -> list[sqlite3.Row]:
         with self._connect() as conn:
             return list(conn.execute("SELECT * FROM order_events WHERE ticket_id = ? ORDER BY id", (ticket_id,)).fetchall())
+
+    def get_latest_executed_trade_ticket(self, symbol: str | None = None) -> sqlite3.Row | None:
+        statuses = ("paper_executed", "live_order_submitted")
+        sql = """
+            SELECT * FROM trade_tickets
+            WHERE status IN (?, ?)
+        """
+        params: list[Any] = [*statuses]
+        if symbol is not None:
+            sql += " AND symbol = ?"
+            params.append(symbol)
+        sql += " ORDER BY created_at DESC LIMIT 1"
+        with self._connect() as conn:
+            return conn.execute(sql, params).fetchone()
+
+    def sum_executed_buy_amount(self, start_iso: str, end_iso: str, symbol: str | None = None) -> int:
+        sql = """
+            SELECT COALESCE(SUM(estimated_amount_krw), 0) AS total
+            FROM trade_tickets
+            WHERE side = 'buy'
+              AND status IN ('paper_executed', 'live_order_submitted')
+              AND created_at >= ?
+              AND created_at < ?
+        """
+        params: list[Any] = [start_iso, end_iso]
+        if symbol is not None:
+            sql += " AND symbol = ?"
+            params.append(symbol)
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+            return int(row["total"] or 0)
+
+    def set_runtime_state(self, state_key: str, state_value: str, reason: str = "") -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO runtime_state (state_key, state_value, reason, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(state_key) DO UPDATE SET
+                    state_value = excluded.state_value,
+                    reason = excluded.reason,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                (state_key, state_value, reason),
+            )
+
+    def get_runtime_state(self, state_key: str) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute("SELECT * FROM runtime_state WHERE state_key = ?", (state_key,)).fetchone()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)

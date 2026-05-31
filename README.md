@@ -126,6 +126,8 @@ python3 scripts/run_scheduled_kiwoom_scan.py 498270
 KIWOOM_SCAN_SYMBOL=498270
 KIWOOM_SCAN_FORCE=false
 KIWOOM_NOTIFY_WHEN_NO_TICKET=true
+KIWOOM_ENFORCE_OPERATIONAL_RISK=true
+KIWOOM_CIRCUIT_BREAKER_ENABLED=true
 KRX_HOLIDAYS=2026-01-01,20260216
 ```
 
@@ -133,8 +135,17 @@ KRX_HOLIDAYS=2026-01-01,20260216
 
 - 장 시간 밖이면 workflow를 실행하지 않고 생략 메시지만 출력합니다.
 - `--force` 또는 `KIWOOM_SCAN_FORCE=true`이면 장 시간 밖에서도 강제 실행할 수 있습니다.
+- 운영 리스크 가드가 켜져 있으면 circuit breaker, 주문 cooldown, 일일 매수 한도를 먼저 검사합니다.
 - 티켓이 생성되면 알림에 `승인 TT-...` / `거절 TT-...` 명령이 포함됩니다.
 - `--no-send`는 Telegram API 호출 없이 알림 텍스트만 검증합니다.
+
+운영 circuit breaker는 아래 스크립트로 확인/변경합니다.
+
+```bash
+python3 scripts/manage_runtime_risk.py status
+python3 scripts/manage_runtime_risk.py on --reason "manual halt"
+python3 scripts/manage_runtime_risk.py off --reason "resume scans"
+```
 
 ## live_manual 주문 API 준비
 

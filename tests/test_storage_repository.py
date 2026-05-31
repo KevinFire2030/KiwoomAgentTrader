@@ -1,6 +1,8 @@
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from app.agents.models import RiskReview, TradeTicket
 from app.storage.repository import TradingRepository
@@ -80,6 +82,60 @@ class TradingRepositoryTest(unittest.TestCase):
             self.assertEqual(len(events), 1)
             self.assertEqual(events[0]["mode"], "live_manual")
             self.assertIn("kt10000", events[0]["order_request_json"])
+
+    def test_sums_executed_buy_amount_and_latest_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            kst = ZoneInfo("Asia/Seoul")
+            first = TradeTicket(
+                "TT-runtime-001",
+                "498270",
+                "buy",
+                2,
+                "limit",
+                10000,
+                "trading_strategy_agent",
+                risk_approved=True,
+                user_approved=True,
+                status="paper_executed",
+                created_at=datetime(2026, 6, 1, 9, 10, tzinfo=kst),
+            )
+            second = TradeTicket(
+                "TT-runtime-002",
+                "498270",
+                "buy",
+                3,
+                "limit",
+                10000,
+                "trading_strategy_agent",
+                risk_approved=True,
+                user_approved=True,
+                status="pending_user_approval",
+                created_at=datetime(2026, 6, 1, 9, 20, tzinfo=kst),
+            )
+            repo.record_trade_ticket("run-runtime-001", first)
+            repo.record_trade_ticket("run-runtime-002", second)
+
+            total = repo.sum_executed_buy_amount("2026-06-01T00:00:00+09:00", "2026-06-02T00:00:00+09:00", "498270")
+            latest = repo.get_latest_executed_trade_ticket("498270")
+
+            self.assertEqual(total, 20000)
+            self.assertIsNotNone(latest)
+            self.assertEqual(latest["ticket_id"], "TT-runtime-001")
+
+    def test_runtime_state_upsert(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+
+            repo.set_runtime_state("circuit_breaker", "on", "manual halt")
+            repo.set_runtime_state("circuit_breaker", "off", "resumed")
+
+            row = repo.get_runtime_state("circuit_breaker")
+            self.assertIsNotNone(row)
+            self.assertEqual(row["state_value"], "off")
+            self.assertEqual(row["reason"], "resumed")
 
 
 if __name__ == "__main__":

@@ -1,9 +1,12 @@
+import tempfile
 import unittest
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from app.agents.models import RiskReview, TradeTicket, WorkflowResult
 from app.automation.scheduled_scan import ScheduledScanConfig, market_session_decision, run_scheduled_scan
+from app.storage.repository import TradingRepository
 
 
 KST = ZoneInfo("Asia/Seoul")
@@ -140,6 +143,44 @@ class ScheduledScanTest(unittest.TestCase):
         self.assertEqual(result.status, "completed_notified")
         self.assertTrue(result.notification_sent)
         self.assertIn("주말 휴장", result.message)
+
+    def test_operational_risk_blocks_scan_before_workflow(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            repo.set_runtime_state("circuit_breaker", "on", "manual halt")
+            config = ScheduledScanConfig(db_path=Path(tmp) / "trading.db")
+
+            result = run_scheduled_scan(
+                config,
+                workflow_runner=lambda symbol: calls.append(symbol) or make_result(None),
+                now=datetime(2026, 6, 1, 10, 0, tzinfo=KST),
+            )
+
+        self.assertEqual(result.status, "skipped_operational_risk")
+        self.assertEqual(calls, [])
+        self.assertIsNotNone(result.operational_risk)
+        self.assertIn("운영 리스크 차단", result.message)
+        self.assertIn("manual halt", result.message)
+
+    def test_force_bypasses_operational_risk_for_smoke_test(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            repo.set_runtime_state("circuit_breaker", "on", "manual halt")
+            config = ScheduledScanConfig(db_path=Path(tmp) / "trading.db", force=True, notify_when_no_ticket=False)
+
+            result = run_scheduled_scan(
+                config,
+                workflow_runner=lambda symbol: calls.append(symbol) or make_result(None),
+                now=datetime(2026, 6, 1, 10, 0, tzinfo=KST),
+            )
+
+        self.assertEqual(result.status, "completed_no_notification")
+        self.assertEqual(calls, ["498270"])
+        self.assertIsNotNone(result.operational_risk)
 
 
 if __name__ == "__main__":

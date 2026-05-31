@@ -8,6 +8,8 @@ from typing import Callable, Protocol
 from zoneinfo import ZoneInfo
 
 from app.agents.models import WorkflowResult
+from app.automation.operational_risk import OperationalRiskDecision, OperationalRiskGuard, OperationalRiskPolicy
+from app.storage.repository import TradingRepository
 from app.telegram.client import TelegramBotClient, TelegramTarget
 
 KST = ZoneInfo("Asia/Seoul")
@@ -35,6 +37,10 @@ class ScheduledScanConfig:
     bot_token: str | None = None
     force: bool = False
     notify_when_no_ticket: bool = True
+    enforce_operational_risk: bool = True
+    max_daily_buy_amount_krw: int = 300_000
+    order_cooldown_minutes: int = 30
+    circuit_breaker_enabled: bool = True
     market_open: time = time(9, 5)
     market_close: time = time(15, 10)
     holidays: frozenset[str] = field(default_factory=frozenset)
@@ -52,6 +58,10 @@ class ScheduledScanConfig:
             bot_token=os.getenv("TELEGRAM_BOT_TOKEN"),
             force=_env_bool("KIWOOM_SCAN_FORCE", False),
             notify_when_no_ticket=_env_bool("KIWOOM_NOTIFY_WHEN_NO_TICKET", True),
+            enforce_operational_risk=_env_bool("KIWOOM_ENFORCE_OPERATIONAL_RISK", True),
+            max_daily_buy_amount_krw=int(os.getenv("MAX_DAILY_BUY_AMOUNT_KRW", "300000")),
+            order_cooldown_minutes=int(os.getenv("ORDER_COOLDOWN_MINUTES", "30")),
+            circuit_breaker_enabled=_env_bool("KIWOOM_CIRCUIT_BREAKER_ENABLED", True),
             holidays=holidays,
         )
 
@@ -66,6 +76,7 @@ class ScheduledScanResult:
     session: MarketSessionDecision
     workflow_result: WorkflowResult | None = None
     notification_sent: bool = False
+    operational_risk: OperationalRiskDecision | None = None
 
 
 def market_session_decision(config: ScheduledScanConfig, now: datetime | None = None) -> MarketSessionDecision:
@@ -88,12 +99,18 @@ def run_scheduled_scan(
     *,
     workflow_runner: Callable[[str], WorkflowResult] | None = None,
     telegram_client: TelegramSender | None = None,
+    operational_guard: OperationalRiskGuard | None = None,
     now: datetime | None = None,
 ) -> ScheduledScanResult:
     session = market_session_decision(config, now)
     if not config.force and not session.is_open:
         message = _format_skip_message(config, session)
         return ScheduledScanResult("skipped_market_closed", message, session)
+
+    operational_risk = _evaluate_operational_risk(config, operational_guard, session.now_kst)
+    if operational_risk is not None and not config.force and not operational_risk.allowed:
+        message = _format_operational_skip_message(config, session, operational_risk)
+        return ScheduledScanResult("skipped_operational_risk", message, session, operational_risk=operational_risk)
 
     runner = workflow_runner or _default_workflow_runner
     workflow_result = runner(config.symbol)
@@ -109,7 +126,7 @@ def run_scheduled_scan(
         sent = True
 
     status = "completed_notified" if sent else "completed_no_notification"
-    return ScheduledScanResult(status, notification_text, session, workflow_result, sent)
+    return ScheduledScanResult(status, notification_text, session, workflow_result, sent, operational_risk)
 
 
 def format_scan_notification(
@@ -151,6 +168,41 @@ def _format_skip_message(config: ScheduledScanConfig, session: MarketSessionDeci
             "강제 실행이 필요하면 --force 또는 KIWOOM_SCAN_FORCE=true를 사용하세요.",
         ]
     )
+
+
+def _format_operational_skip_message(
+    config: ScheduledScanConfig,
+    session: MarketSessionDecision,
+    decision: OperationalRiskDecision,
+) -> str:
+    return "\n".join(
+        [
+            "[Kiwoom Agent Trader 운영 리스크 차단]",
+            f"시간: {session.now_kst.strftime('%Y-%m-%d %H:%M:%S KST')}",
+            f"대상: {config.symbol}",
+            f"상태: {decision.status}",
+            f"사유: {decision.reason}",
+            "운영자가 의도적으로 우회 검증할 때만 --force 또는 KIWOOM_SCAN_FORCE=true를 사용하세요.",
+        ]
+    )
+
+
+def _evaluate_operational_risk(
+    config: ScheduledScanConfig,
+    operational_guard: OperationalRiskGuard | None,
+    now_kst: datetime,
+) -> OperationalRiskDecision | None:
+    if not config.enforce_operational_risk:
+        return None
+    guard = operational_guard or OperationalRiskGuard(
+        TradingRepository(config.db_path),
+        OperationalRiskPolicy(
+            max_daily_buy_amount_krw=config.max_daily_buy_amount_krw,
+            order_cooldown_minutes=config.order_cooldown_minutes,
+            circuit_breaker_enabled=config.circuit_breaker_enabled,
+        ),
+    )
+    return guard.evaluate(symbol=config.symbol, now=now_kst)
 
 
 def _should_send_notification(config: ScheduledScanConfig, workflow_result: WorkflowResult) -> bool:

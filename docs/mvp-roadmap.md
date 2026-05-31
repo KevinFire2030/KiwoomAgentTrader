@@ -95,13 +95,16 @@ Current implementation status:
 - KST market scan window guard: done
 - Weekend/configured KRX holiday skip: done
 - Telegram alert for pending approval ticket: done
+- Runtime circuit breaker state: done
+- Order cooldown enforcement before scheduled scans: done
+- Daily executed-buy amount guard before scheduled scans: done
 
 Remaining:
 
 - Cron/system scheduler wiring
 - Dynamic KRX holiday calendar source
-- Daily loss/cooldown enforcement from real order/fill state
-- Circuit breaker state persistence
+- Daily realized-loss guard from real fill/position state
+- Post-fill circuit breaker automation
 
 ## MVP 6 — Post-Trade Analysis Loop
 
