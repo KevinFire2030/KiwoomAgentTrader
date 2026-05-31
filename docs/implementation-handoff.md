@@ -1,6 +1,6 @@
 # KiwoomAgentTrader Implementation Handoff
 
-Last updated: 2026-05-31
+Last updated: 2026-06-01
 Thread: Telegram group `hermes`, topic/thread 502
 Repository: `/mnt/e/KiwoomAgentTrader`
 
@@ -222,7 +222,7 @@ fill/position sync
 → future scheduled scans blocked
 ```
 
-### MVP 6 — Post-trade analysis loop, first pass
+### MVP 6 — Post-trade analysis loop
 
 Implemented:
 
@@ -231,18 +231,25 @@ Implemented:
 - CLI report generation.
 - Deterministic outcome classification: `win`, `loss`, `flat`.
 - Lessons based on risk review, order events, result, and ticket status.
+- Daily Telegram post-trade digest.
+- KST-date aggregation of `post_trade_analyses` with total realized P&L, `win`/`loss`/`flat` counts, ticket count, best/worst ticket, top improvement lessons, and current circuit breaker state.
+- Digest CLI with `--no-send` smoke mode and optional Telegram send using existing Telegram target environment variables.
 
 Important files:
 
 - `app/analysis/post_trade.py`
+- `app/analysis/post_trade_digest.py`
 - `scripts/analyze_trade_ticket.py`
+- `scripts/send_daily_post_trade_digest.py`
 - `tests/test_post_trade_analysis.py`
+- `tests/test_post_trade_digest.py`
 - `app/storage/repository.py` (`post_trade_analyses`, `PostTradeAnalysisRecord`)
 
 Usage:
 
 ```bash
 python3 scripts/analyze_trade_ticket.py TT-...
+python3 scripts/send_daily_post_trade_digest.py --date 2026-06-01 --no-send
 ```
 
 Linking rule:
@@ -264,49 +271,7 @@ Linking rule:
 
 ## What remains to implement next
 
-### Next immediate task: Daily Telegram post-trade digest
-
-Build a daily digest that aggregates `post_trade_analyses` over a KST date and formats/sends a Telegram-ready report.
-
-Recommended requirements:
-
-1. TDD first: add failing tests before production code.
-2. Aggregate one KST day of `post_trade_analyses`.
-3. Compute:
-   - total realized P&L,
-   - `win` / `loss` / `flat` counts,
-   - ticket count,
-   - best/worst ticket if available,
-   - top improvement lessons,
-   - circuit breaker current state.
-4. Add formatter for Telegram text.
-5. Add CLI script, likely `scripts/send_daily_post_trade_digest.py` or `scripts/build_daily_post_trade_digest.py`.
-6. Prefer `--no-send` option first for smoke testing.
-7. If sending is added, reuse existing Telegram client/target config from scheduled scan.
-8. Do not call Kiwoom order API.
-9. Run tests and smoke checks.
-10. Update docs and push.
-
-Suggested files to add/change:
-
-- `app/analysis/post_trade_digest.py`
-- `scripts/send_daily_post_trade_digest.py`
-- `tests/test_post_trade_digest.py`
-- `app/storage/repository.py` for date-range query methods over `post_trade_analyses`
-- `README.md`
-- `docs/mvp-roadmap.md`
-
-Suggested test cases:
-
-- Aggregates multiple analyses on same KST date.
-- Ignores analyses from previous/next KST day.
-- Formats profit/loss with signed KRW.
-- Includes win/loss/flat counts.
-- Includes top lessons without duplication.
-- Handles no analyses gracefully.
-- `--no-send` does not call Telegram.
-
-### After digest: Strategy improvement memory/export loop
+### Next immediate task: Strategy improvement memory/export loop
 
 Goal:
 
@@ -343,20 +308,19 @@ Use this in a fresh session after 5h usage quota resets:
 
 저장소는 /mnt/e/KiwoomAgentTrader 이고,
 현재 구현 상태는 docs/implementation-handoff.md 와 docs/mvp-roadmap.md 를 먼저 읽어서 파악해줘.
-현재 MVP6 post-trade analysis loop 1차 구현까지 완료됐고,
-다음 단계는 Daily Telegram post-trade digest 구현이야.
+현재 MVP6 post-trade analysis loop와 Daily Telegram post-trade digest까지 완료됐고,
+다음 단계는 Strategy improvement memory/export loop 구현이야.
 
 요구사항:
 1. TDD로 실패 테스트 먼저 작성하고 확인
-2. 하루치 post_trade_analyses를 KST 날짜 기준으로 집계
-3. 총 실현손익, win/loss/flat 개수, 티켓별 요약, 주요 개선 메모 생성
-4. circuit breaker 현재 상태도 요약에 포함
-5. Telegram 전송용 텍스트 formatter 추가
-6. CLI 또는 scheduled script 추가, --no-send smoke 지원
-7. 전체 테스트 실행
-8. Kiwoom read API smoke 확인
-9. README/docs 업데이트
-10. commit/push까지 완료
+2. 누적 post_trade_analyses 개선 메모를 날짜/심볼/결과별로 집계
+3. source ticket ID를 보존
+4. `docs/strategy-lessons.md` 같은 durable artifact 또는 DB 테이블로 누적 export
+5. 기존 일일 digest와 충돌하지 않게 읽기/내보내기 중심으로 구현
+6. 전체 테스트 실행
+7. Kiwoom read API smoke 확인
+8. README/docs 업데이트
+9. commit/push까지 완료
 
 실주문 API는 호출하지 말고, read API와 로컬 DB/테스트만 사용해.
 ```
@@ -367,6 +331,7 @@ Use this in a fresh session after 5h usage quota resets:
 cd /mnt/e/KiwoomAgentTrader
 git status --short --branch
 python3 -m unittest discover -s tests
+python3 scripts/send_daily_post_trade_digest.py --no-send
 python3 scripts/check_kiwoom_read_api.py
 python3 scripts/run_scheduled_kiwoom_scan.py --no-send --quiet-skip > /tmp/kiwoom_quiet.out && test ! -s /tmp/kiwoom_quiet.out && echo quiet-scheduler-ok
 ```

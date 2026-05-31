@@ -116,8 +116,9 @@ Current implementation status:
 - Ticket/run/order event/realized P&L based post-trade analysis: done
 - `post_trade_analyses` persistence: done
 - CLI report generation: done (`scripts/analyze_trade_ticket.py`)
+- Daily Telegram post-trade digest: done (`scripts/send_daily_post_trade_digest.py`)
+- KST-day aggregation with total realized P&L, win/loss/flat counts, best/worst ticket, top lessons, and circuit breaker state: done
 
 Remaining:
 
-- Daily Telegram post-trade digest
 - Strategy improvement memory/export loop

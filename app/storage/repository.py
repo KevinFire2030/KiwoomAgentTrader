@@ -486,6 +486,10 @@ class TradingRepository:
                 (ticket_id,),
             ).fetchone()
 
+    def list_post_trade_analyses(self) -> list[sqlite3.Row]:
+        with self._connect() as conn:
+            return list(conn.execute("SELECT * FROM post_trade_analyses ORDER BY created_at, id").fetchall())
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)
         conn.row_factory = sqlite3.Row
