@@ -71,15 +71,37 @@ Current implementation status:
 - Ticket user approval/rejection status update: done
 - Paper-mode approval execution: done
 - CLI handler script for Telegram text payload simulation: done
-- Actual Telegram gateway webhook binding: pending
+- Actual Telegram gateway webhook/update binding: done
+- Scheduled scan Telegram notification text: done
 
 ## MVP 4 — live_manual Order Execution
 
 `ENABLE_LIVE_TRADING=true`, `TRADING_MODE=live_manual`, risk approved, user approved, allowed symbol 조건에서만 실행.
 
+Current implementation status:
+
+- Dry-run order request preparation: done
+- Final approval command: done
+- `order_events` live-order audit log: done
+- Live disabled hard gate before broker order API: done
+
 ## MVP 5 — Limited Auto Trading
 
 Small order amount, whitelist symbols, cooldown, daily loss cap, circuit breaker.
+
+Current implementation status:
+
+- Scheduler-safe one-shot scan script: done
+- KST market scan window guard: done
+- Weekend/configured KRX holiday skip: done
+- Telegram alert for pending approval ticket: done
+
+Remaining:
+
+- Cron/system scheduler wiring
+- Dynamic KRX holiday calendar source
+- Daily loss/cooldown enforcement from real order/fill state
+- Circuit breaker state persistence
 
 ## MVP 6 — Post-Trade Analysis Loop
 

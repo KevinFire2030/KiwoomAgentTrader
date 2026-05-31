@@ -111,6 +111,31 @@ python3 scripts/run_telegram_approval_bridge.py --mode paper
 
 주의: 동일 Bot token을 Hermes Gateway가 이미 polling 중이면 Telegram `getUpdates` long polling은 한 프로세스만 사용하세요. Hermes Gateway와 병행 운영할 때는 webhook/update JSON 진입점 또는 전용 승인 봇 token을 사용합니다.
 
+## 정기 스캔/Telegram 알림
+
+장 시간에만 1회 스캔을 실행하고, 결과를 Telegram 승인 토픽으로 보낼 수 있습니다. 기본 장 시간은 KST `09:05`~`15:10`이며, 주말과 `.env`의 `KRX_HOLIDAYS` 날짜는 자동 생략합니다.
+
+```bash
+python3 scripts/run_scheduled_kiwoom_scan.py --no-send
+python3 scripts/run_scheduled_kiwoom_scan.py 498270
+```
+
+환경 변수:
+
+```bash
+KIWOOM_SCAN_SYMBOL=498270
+KIWOOM_SCAN_FORCE=false
+KIWOOM_NOTIFY_WHEN_NO_TICKET=true
+KRX_HOLIDAYS=2026-01-01,20260216
+```
+
+동작:
+
+- 장 시간 밖이면 workflow를 실행하지 않고 생략 메시지만 출력합니다.
+- `--force` 또는 `KIWOOM_SCAN_FORCE=true`이면 장 시간 밖에서도 강제 실행할 수 있습니다.
+- 티켓이 생성되면 알림에 `승인 TT-...` / `거절 TT-...` 명령이 포함됩니다.
+- `--no-send`는 Telegram API 호출 없이 알림 텍스트만 검증합니다.
+
 ## live_manual 주문 API 준비
 
 `live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.
