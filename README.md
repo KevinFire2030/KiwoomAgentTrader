@@ -44,6 +44,14 @@ python3 -m unittest discover -s tests
 python3 scripts/check_kiwoom_read_api.py
 ```
 
+## 최근 1년 입출금 내역 조회
+
+키움 `kt00015` 위탁종합거래내역요청으로 최근 1년 이내 입출금 내역을 조회하고 입금/출금 합계와 마지막 예수금잔고를 요약합니다.
+
+```bash
+python3 scripts/check_kiwoom_deposit_withdraw_history.py
+```
+
 ## 실제 읽기 데이터 기반 에이전트 workflow
 
 아래 명령은 키움 REST API에서 `498270` 현재가와 계좌 snapshot을 가져온 뒤 Chief Investment Agent workflow에 주입합니다. 현재 구현은 `paper` 모드에서만 주문 기록을 남기며, 실주문 API는 호출하지 않습니다.
