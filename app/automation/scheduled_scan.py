@@ -40,6 +40,7 @@ class ScheduledScanConfig:
     notify_when_no_ticket: bool = True
     enforce_operational_risk: bool = True
     max_daily_buy_amount_krw: int = 300_000
+    max_daily_loss_krw: int = 50_000
     order_cooldown_minutes: int = 30
     circuit_breaker_enabled: bool = True
     market_open: time = time(9, 5)
@@ -63,6 +64,7 @@ class ScheduledScanConfig:
             notify_when_no_ticket=_env_bool("KIWOOM_NOTIFY_WHEN_NO_TICKET", True),
             enforce_operational_risk=_env_bool("KIWOOM_ENFORCE_OPERATIONAL_RISK", True),
             max_daily_buy_amount_krw=int(os.getenv("MAX_DAILY_BUY_AMOUNT_KRW", "300000")),
+            max_daily_loss_krw=int(os.getenv("MAX_DAILY_LOSS_KRW", "50000")),
             order_cooldown_minutes=int(os.getenv("ORDER_COOLDOWN_MINUTES", "30")),
             circuit_breaker_enabled=_env_bool("KIWOOM_CIRCUIT_BREAKER_ENABLED", True),
             holidays=holiday_result.holidays,
@@ -203,6 +205,7 @@ def _evaluate_operational_risk(
         TradingRepository(config.db_path),
         OperationalRiskPolicy(
             max_daily_buy_amount_krw=config.max_daily_buy_amount_krw,
+            max_daily_loss_krw=config.max_daily_loss_krw,
             order_cooldown_minutes=config.order_cooldown_minutes,
             circuit_breaker_enabled=config.circuit_breaker_enabled,
         ),

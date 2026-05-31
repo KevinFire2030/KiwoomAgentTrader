@@ -2,10 +2,21 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
 from app.agents.models import AccountSnapshot, AccountState, MarketSnapshot, RiskReview, TradeTicket
+
+
+@dataclass(frozen=True)
+class RealizedPnlEvent:
+    symbol: str
+    realized_pnl_krw: int
+    source: str
+    raw: dict[str, Any] = field(default_factory=dict)
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 SCHEMA_SQL = """
@@ -103,6 +114,16 @@ CREATE TABLE IF NOT EXISTS runtime_state (
     state_value TEXT NOT NULL,
     reason TEXT NOT NULL,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS realized_pnl_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL,
+    realized_pnl_krw INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    raw_json TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -363,6 +384,39 @@ class TradingRepository:
     def get_runtime_state(self, state_key: str) -> sqlite3.Row | None:
         with self._connect() as conn:
             return conn.execute("SELECT * FROM runtime_state WHERE state_key = ?", (state_key,)).fetchone()
+
+    def record_realized_pnl_event(self, event: RealizedPnlEvent) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO realized_pnl_events (
+                    symbol, realized_pnl_krw, source, raw_json, occurred_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    event.symbol,
+                    event.realized_pnl_krw,
+                    event.source,
+                    json.dumps(event.raw, ensure_ascii=False),
+                    event.occurred_at.isoformat(),
+                ),
+            )
+            return int(cursor.lastrowid or 0)
+
+    def sum_realized_pnl(self, start_iso: str, end_iso: str, symbol: str | None = None) -> int:
+        sql = """
+            SELECT COALESCE(SUM(realized_pnl_krw), 0) AS total
+            FROM realized_pnl_events
+            WHERE occurred_at >= ?
+              AND occurred_at < ?
+        """
+        params: list[Any] = [start_iso, end_iso]
+        if symbol is not None:
+            sql += " AND symbol = ?"
+            params.append(symbol)
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+            return int(row["total"] or 0)
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)

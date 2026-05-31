@@ -100,10 +100,10 @@ Current implementation status:
 - Daily executed-buy amount guard before scheduled scans: done
 - Scheduler/cron quiet wrapper: done
 - Dynamic KRX/Korea holiday calendar with cache fallback: done
+- Daily realized-loss guard from real fill/position state: done
 
 Remaining:
 
-- Daily realized-loss guard from real fill/position state
 - Post-fill circuit breaker automation
 
 ## MVP 6 — Post-Trade Analysis Loop

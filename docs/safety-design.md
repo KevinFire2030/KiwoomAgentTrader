@@ -26,7 +26,7 @@
 - allowed symbol: `498270`
 - max order amount: 100,000 KRW
 - max daily buy amount: 300,000 KRW
-- max daily loss: 50,000 KRW
+- max daily loss: 50,000 KRW, calculated from KST same-day `realized_pnl_events`
 - order cooldown: 30 minutes
 - live trading: disabled
 - auto order: disabled

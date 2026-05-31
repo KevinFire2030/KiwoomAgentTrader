@@ -129,6 +129,8 @@ KIWOOM_SCAN_FORCE=false
 KIWOOM_NOTIFY_WHEN_NO_TICKET=true
 KIWOOM_ENFORCE_OPERATIONAL_RISK=true
 KIWOOM_CIRCUIT_BREAKER_ENABLED=true
+MAX_DAILY_BUY_AMOUNT_KRW=300000
+MAX_DAILY_LOSS_KRW=50000
 KRX_HOLIDAY_SOURCE=auto
 KRX_HOLIDAY_CACHE_DIR=data/calendar
 KRX_HOLIDAY_YEARS=
@@ -141,7 +143,8 @@ KRX_HOLIDAYS=2026-01-01,20260216
 - `KRX_HOLIDAY_SOURCE=auto`는 한국 공휴일 API를 조회해 `data/calendar/kr_holidays_YYYY.json`에 캐시하고, 실패 시 캐시/수동 `KRX_HOLIDAYS`로 fallback합니다.
 - 휴장일 로더 검증은 `python3 scripts/check_krx_holidays.py --year 2026`로 할 수 있습니다.
 - `--force` 또는 `KIWOOM_SCAN_FORCE=true`이면 장 시간 밖에서도 강제 실행할 수 있습니다.
-- 운영 리스크 가드가 켜져 있으면 circuit breaker, 주문 cooldown, 일일 매수 한도를 먼저 검사합니다.
+- 운영 리스크 가드가 켜져 있으면 circuit breaker, 주문 cooldown, 일일 매수 한도, 일일 실현손실 한도를 먼저 검사합니다.
+- 실현손익은 `realized_pnl_events`에 저장된 실제 체결/포지션 동기화 결과를 KST 당일 기준으로 합산합니다. 당일 합계가 `-MAX_DAILY_LOSS_KRW` 이하이면 신규 스캔을 차단합니다.
 - 티켓이 생성되면 알림에 `승인 TT-...` / `거절 TT-...` 명령이 포함됩니다.
 - `--no-send`는 Telegram API 호출 없이 알림 텍스트만 검증합니다.
 - `scripts/cron_kiwoom_scan.sh`는 scheduler용 wrapper이며, 장외/휴장/알림 없음/전송 성공 시 stdout을 비워 cron 알림 스팸을 막습니다.

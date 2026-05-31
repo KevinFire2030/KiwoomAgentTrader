@@ -12,6 +12,7 @@ KST = ZoneInfo("Asia/Seoul")
 @dataclass(frozen=True)
 class OperationalRiskPolicy:
     max_daily_buy_amount_krw: int = 300_000
+    max_daily_loss_krw: int = 50_000
     order_cooldown_minutes: int = 30
     circuit_breaker_enabled: bool = True
 
@@ -71,10 +72,22 @@ class OperationalRiskGuard:
                 f"일일 매수 한도 도달: {daily_buy:,}원 >= {self.policy.max_daily_buy_amount_krw:,}원",
             )
 
+        realized_pnl = self.repository.sum_realized_pnl(
+            start_iso=day_start.astimezone(KST).isoformat(),
+            end_iso=day_end.astimezone(KST).isoformat(),
+            symbol=symbol,
+        )
+        if realized_pnl <= -self.policy.max_daily_loss_krw:
+            return OperationalRiskDecision(
+                False,
+                "blocked_daily_realized_loss_limit",
+                f"일일 실현손실 한도 도달: {realized_pnl:,}원 <= -{self.policy.max_daily_loss_krw:,}원",
+            )
+
         return OperationalRiskDecision(
             True,
             "allowed",
-            f"운영 리스크 통과: 일일 매수 {daily_buy:,}원 / 한도 {self.policy.max_daily_buy_amount_krw:,}원",
+            f"운영 리스크 통과: 일일 매수 {daily_buy:,}원 / 한도 {self.policy.max_daily_buy_amount_krw:,}원, 실현손익 {realized_pnl:,}원 / 손실한도 -{self.policy.max_daily_loss_krw:,}원",
         )
 
 
