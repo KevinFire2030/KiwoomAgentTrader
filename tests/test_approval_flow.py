@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,12 +7,28 @@ from app.agents.models import TradeTicket
 from app.approval.commands import ApprovalCommand, parse_approval_command
 from app.approval.workflow import ApprovalWorkflow
 from app.storage.repository import TradingRepository
+from app.kiwoom.orders import KiwoomOrderRequest, KiwoomOrderResult
+
+
+class FakeOrderClient:
+    def __init__(self, accepted=True):
+        self.accepted = accepted
+        self.place_order_calls = 0
+
+    def build_order_request(self, ticket):
+        return KiwoomOrderRequest(ticket.ticket_id, "/api/dostk/ordr", "kt10000", {"stk_cd": ticket.symbol, "ord_qty": str(ticket.quantity)})
+
+    def place_order(self, ticket):
+        self.place_order_calls += 1
+        return KiwoomOrderResult(ticket.ticket_id, self.accepted, 0 if self.accepted else 99, "OK" if self.accepted else "REJECT", {"return_code": 0 if self.accepted else 99, "return_msg": "OK" if self.accepted else "REJECT"})
 
 
 class ApprovalFlowTest(unittest.TestCase):
-    def test_parses_korean_approval_and_rejection_commands(self):
+    def test_parses_korean_approval_rejection_and_final_approval_commands(self):
         self.assertEqual(parse_approval_command("승인 TT-20260531-001"), ApprovalCommand("approve", "TT-20260531-001"))
         self.assertEqual(parse_approval_command("거절 TT-20260531-001"), ApprovalCommand("reject", "TT-20260531-001"))
+        self.assertEqual(parse_approval_command("최종승인 TT-20260531-001"), ApprovalCommand("final_approve", "TT-20260531-001"))
+        self.assertEqual(parse_approval_command("final approve TT-20260531-001"), ApprovalCommand("final_approve", "TT-20260531-001"))
         self.assertIsNone(parse_approval_command("잔액"))
 
     def test_approval_marks_ticket_user_approved_and_executes_paper_order(self):
@@ -132,6 +149,72 @@ class ApprovalFlowTest(unittest.TestCase):
             self.assertIsNotNone(stored)
             self.assertEqual(stored["user_approved"], 1)
             self.assertEqual(stored["status"], "live_manual_ready")
+
+    def test_final_approval_records_blocked_order_event_when_live_disabled(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            ticket = TradeTicket(
+                "TT-test-final-blocked",
+                "498270",
+                "buy",
+                2,
+                "limit",
+                18600,
+                "trading_strategy_agent",
+                risk_approved=True,
+                risk_approved_by="risk_management_agent",
+                user_approved=True,
+                status="live_manual_ready",
+            )
+            repo.record_trade_ticket("run-001", ticket)
+            fake_order_client = FakeOrderClient()
+
+            result = ApprovalWorkflow(repo, order_client=fake_order_client, enable_live_trading=False).handle_text(
+                "최종승인 TT-test-final-blocked", mode="live_manual"
+            )
+
+            self.assertFalse(result.accepted)
+            self.assertIn("실주문 차단", result.message)
+            self.assertEqual(fake_order_client.place_order_calls, 0)
+            events = repo.get_order_events("TT-test-final-blocked")
+            self.assertEqual(len(events), 1)
+            self.assertEqual(events[0]["status"], "blocked_live_disabled")
+            self.assertEqual(json.loads(events[0]["order_request_json"])["api_id"], "kt10000")
+
+    def test_final_approval_submits_when_live_enabled_and_records_audit_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            ticket = TradeTicket(
+                "TT-test-final-submit",
+                "498270",
+                "buy",
+                1,
+                "limit",
+                18600,
+                "trading_strategy_agent",
+                risk_approved=True,
+                risk_approved_by="risk_management_agent",
+                user_approved=True,
+                status="live_manual_ready",
+            )
+            repo.record_trade_ticket("run-001", ticket)
+            fake_order_client = FakeOrderClient()
+
+            result = ApprovalWorkflow(repo, order_client=fake_order_client, enable_live_trading=True).handle_text(
+                "최종승인 TT-test-final-submit", mode="live_manual"
+            )
+
+            self.assertTrue(result.accepted)
+            self.assertEqual(fake_order_client.place_order_calls, 1)
+            stored = repo.get_trade_ticket("TT-test-final-submit")
+            if stored is None:
+                self.fail("ticket not found")
+            self.assertEqual(stored["status"], "live_order_submitted")
+            events = repo.get_order_events("TT-test-final-submit")
+            self.assertEqual(events[0]["status"], "submitted")
+            self.assertEqual(json.loads(events[0]["broker_response_json"])["return_code"], 0)
 
 
 if __name__ == "__main__":

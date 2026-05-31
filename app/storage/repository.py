@@ -85,6 +85,18 @@ CREATE TABLE IF NOT EXISTS risk_reviews (
     reasons_json TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS order_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    order_request_json TEXT NOT NULL,
+    broker_response_json TEXT NOT NULL,
+    message TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -261,6 +273,40 @@ class TradingRepository:
                 "SELECT * FROM risk_reviews WHERE ticket_id = ? ORDER BY id DESC LIMIT 1",
                 (ticket_id,),
             ).fetchone()
+
+    def record_order_event(
+        self,
+        ticket_id: str,
+        mode: str,
+        event_type: str,
+        status: str,
+        order_request: dict[str, Any] | None = None,
+        broker_response: dict[str, Any] | None = None,
+        message: str = "",
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO order_events (
+                    ticket_id, mode, event_type, status, order_request_json,
+                    broker_response_json, message
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    ticket_id,
+                    mode,
+                    event_type,
+                    status,
+                    json.dumps(order_request or {}, ensure_ascii=False),
+                    json.dumps(broker_response or {}, ensure_ascii=False),
+                    message,
+                ),
+            )
+            return int(cursor.lastrowid or 0)
+
+    def get_order_events(self, ticket_id: str) -> list[sqlite3.Row]:
+        with self._connect() as conn:
+            return list(conn.execute("SELECT * FROM order_events WHERE ticket_id = ? ORDER BY id", (ticket_id,)).fetchall())
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)

@@ -60,6 +60,27 @@ class TradingRepositoryTest(unittest.TestCase):
             self.assertEqual(stored_review["approved"], 1)
             self.assertIn("MVP 리스크", stored_review["reasons_json"])
 
+    def test_records_order_event_audit_log(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+
+            event_id = repo.record_order_event(
+                "TT-order-event-001",
+                "live_manual",
+                "final_approval",
+                "blocked_live_disabled",
+                {"api_id": "kt10000"},
+                {},
+                "실주문 차단",
+            )
+
+            self.assertGreater(event_id, 0)
+            events = repo.get_order_events("TT-order-event-001")
+            self.assertEqual(len(events), 1)
+            self.assertEqual(events[0]["mode"], "live_manual")
+            self.assertIn("kt10000", events[0]["order_request_json"])
+
 
 if __name__ == "__main__":
     unittest.main()

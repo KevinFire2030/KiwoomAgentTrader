@@ -121,6 +121,20 @@ python3 scripts/prepare_live_order_request.py TT-...
 
 이 스크립트는 키움 주문 API를 호출하지 않고, `/api/dostk/ordr` 요청 endpoint/api-id/payload만 출력합니다. 실제 주문 제출은 별도 `ENABLE_LIVE_TRADING=true` 게이트가 켜져야 하며, 기본값은 항상 OFF입니다.
 
+## live_manual 최종승인과 주문 감사 로그
+
+`live_manual_ready` 티켓은 2단계 명령으로만 제출 경로에 들어갑니다.
+
+```bash
+python3 scripts/handle_final_approval_command.py '최종승인 TT-...'
+```
+
+안전 동작:
+
+- `TRADING_MODE=live_manual` 그리고 `ENABLE_LIVE_TRADING=true`가 아니면 키움 주문 API를 호출하지 않습니다.
+- 차단/제출/브로커 거절 결과는 모두 `order_events`에 저장합니다.
+- 저장 항목은 `ticket_id`, `mode`, `event_type`, `status`, 주문 요청 JSON, 브로커 응답 JSON, 메시지입니다.
+
 저장되는 데이터:
 
 - `market_snapshots`: 현재가, 등락률, 원본 응답 JSON

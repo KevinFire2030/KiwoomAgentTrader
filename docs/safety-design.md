@@ -41,4 +41,4 @@ Kiwoom API 인증 실패, 계좌/포지션 검증 실패, 정책 로드 실패, 
 
 ## Audit Trail
 
-Every workflow run must save run_id, agent inputs/outputs, risk decision, ticket state changes, order request/response, and user approval message if applicable.
+Every workflow run must save run_id, agent inputs/outputs, risk decision, ticket state changes, order request/response, and user approval message if applicable. `order_events` records final approval blocks, live submissions, broker rejections, request payloads, broker responses, and status messages for each ticket.
