@@ -51,6 +51,22 @@ class AccountSnapshot:
 
 
 @dataclass(frozen=True)
+class AccountState:
+    agent: str
+    account_no_masked: str
+    cash_balance_krw: int
+    total_evaluation_krw: int
+    positions_count: int
+    recent_deposit_krw: int
+    recent_withdraw_krw: int
+    net_cash_flow_krw: int
+    investable_cash_krw: int
+    summary: str
+    warnings: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass(frozen=True)
 class TradeTicket:
     ticket_id: str
     symbol: str

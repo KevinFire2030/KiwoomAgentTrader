@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
-from app.agents.models import AccountSnapshot, MarketSnapshot, RiskReview, TradeTicket
+from app.agents.models import AccountSnapshot, AccountState, MarketSnapshot, RiskReview, TradeTicket
 
 
 SCHEMA_SQL = """
@@ -59,6 +59,22 @@ CREATE TABLE IF NOT EXISTS account_snapshots (
     captured_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS account_states (
+    run_id TEXT PRIMARY KEY,
+    agent TEXT NOT NULL,
+    account_no_masked TEXT NOT NULL,
+    cash_balance_krw INTEGER NOT NULL,
+    total_evaluation_krw INTEGER NOT NULL,
+    positions_count INTEGER NOT NULL,
+    recent_deposit_krw INTEGER NOT NULL,
+    recent_withdraw_krw INTEGER NOT NULL,
+    net_cash_flow_krw INTEGER NOT NULL,
+    investable_cash_krw INTEGER NOT NULL,
+    summary TEXT NOT NULL,
+    warnings_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS risk_reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     run_id TEXT NOT NULL,
@@ -70,6 +86,13 @@ CREATE TABLE IF NOT EXISTS risk_reviews (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 """
+
+
+class ClosingConnection(sqlite3.Connection):
+    def __exit__(self, exc_type, exc_value, traceback) -> Literal[False]:
+        super().__exit__(exc_type, exc_value, traceback)
+        self.close()
+        return False
 
 
 class TradingRepository:
@@ -179,6 +202,37 @@ class TradingRepository:
         with self._connect() as conn:
             return conn.execute("SELECT * FROM account_snapshots ORDER BY id DESC LIMIT 1").fetchone()
 
+    def record_account_state(self, run_id: str, state: AccountState) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO account_states (
+                    run_id, agent, account_no_masked, cash_balance_krw, total_evaluation_krw,
+                    positions_count, recent_deposit_krw, recent_withdraw_krw, net_cash_flow_krw,
+                    investable_cash_krw, summary, warnings_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    state.agent,
+                    state.account_no_masked,
+                    state.cash_balance_krw,
+                    state.total_evaluation_krw,
+                    state.positions_count,
+                    state.recent_deposit_krw,
+                    state.recent_withdraw_krw,
+                    state.net_cash_flow_krw,
+                    state.investable_cash_krw,
+                    state.summary,
+                    json.dumps(state.warnings, ensure_ascii=False),
+                    state.created_at.isoformat(),
+                ),
+            )
+
+    def get_account_state(self, run_id: str) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute("SELECT * FROM account_states WHERE run_id = ?", (run_id,)).fetchone()
+
     def record_risk_review(self, run_id: str, review: RiskReview) -> None:
         ticket_id = review.ticket.ticket_id if review.ticket else None
         with self._connect() as conn:
@@ -198,6 +252,6 @@ class TradingRepository:
             ).fetchone()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, factory=ClosingConnection)
         conn.row_factory = sqlite3.Row
         return conn

@@ -54,14 +54,22 @@ python3 scripts/check_kiwoom_deposit_withdraw_history.py
 
 ## 실제 읽기 데이터 기반 에이전트 workflow
 
-아래 명령은 키움 REST API에서 `498270` 현재가와 계좌 snapshot을 가져온 뒤 Chief Investment Agent workflow에 주입합니다. 현재 구현은 `paper` 모드에서만 주문 기록을 남기며, 실주문 API는 호출하지 않습니다.
+아래 명령은 키움 REST API에서 `498270` 현재가, 계좌 snapshot, 최근 1년 입출금 내역을 가져온 뒤 Chief Investment Agent workflow에 주입합니다. 현재 구현은 `paper` 모드에서만 주문 기록을 남기며, 실주문 API는 호출하지 않습니다.
 
 ```bash
 python3 scripts/run_kiwoom_intraday_workflow.py 498270
 ```
 
+Account State Agent는 다음 값을 계산해 Chief Agent 리포트와 DB에 남깁니다.
+
+- 현금성 잔고
+- 보유 평가금액과 보유종목 수
+- 최근 1년 입금/출금/순입금
+- MVP 기준 투자 가능 현금: 현금성 잔고의 30%
+
 저장되는 데이터:
 
 - `market_snapshots`: 현재가, 등락률, 원본 응답 JSON
 - `account_snapshots`: 마스킹 계좌번호, 예수금/추정자산, 평가금액, 보유종목 수
+- `account_states`: Account State Agent가 계산한 현금흐름/투자 가능 현금
 - `agent_runs`, `trade_tickets`, `risk_reviews`: 에이전트 판단/리스크 심사 이력

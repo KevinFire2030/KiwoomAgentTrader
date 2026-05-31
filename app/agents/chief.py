@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.agents.market_analysis import MarketAnalysisAgent
-from app.agents.models import AccountSnapshot, MarketSnapshot, WorkflowResult
+from app.agents.models import AccountSnapshot, AccountState, MarketSnapshot, WorkflowResult
 from app.agents.risk_management import RiskManagementAgent
 from app.agents.stock_recommendation import StockRecommendationAgent
 from app.agents.trade_execution import TradeExecutionAgent
@@ -25,6 +25,7 @@ class ChiefInvestmentAgent:
         mode: str = "paper",
         market_snapshot: MarketSnapshot | None = None,
         account_snapshot: AccountSnapshot | None = None,
+        account_state: AccountState | None = None,
     ) -> WorkflowResult:
         self.repository.initialize()
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -50,12 +51,15 @@ class ChiefInvestmentAgent:
             execution_result,
             market_snapshot,
             account_snapshot,
+            account_state,
         )
         self.repository.record_agent_run(run_id, "intraday_signal_scan", mode, "completed", report)
         if market_snapshot is not None:
             self.repository.record_market_snapshot(run_id, market_snapshot)
         if account_snapshot is not None:
             self.repository.record_account_snapshot(run_id, account_snapshot)
+        if account_state is not None:
+            self.repository.record_account_state(run_id, account_state)
         if ticket is not None:
             self.repository.record_trade_ticket(run_id, ticket)
         self.repository.record_risk_review(run_id, risk_review)
@@ -73,6 +77,7 @@ class ChiefInvestmentAgent:
         execution_result: str,
         market_snapshot: MarketSnapshot | None = None,
         account_snapshot: AccountSnapshot | None = None,
+        account_state: AccountState | None = None,
     ) -> str:
         lines = [
             "[Chief Investment Agent]",
@@ -93,6 +98,13 @@ class ChiefInvestmentAgent:
                 f"예수금/추정자산: {account_snapshot.deposit_asset_amount:,}원",
                 f"평가금액: {account_snapshot.total_evaluation_amount:,}원",
                 f"보유종목 수: {account_snapshot.positions_count}",
+            ])
+        if account_state is not None:
+            lines.extend([
+                f"최근 입금합계: {account_state.recent_deposit_krw:,}원",
+                f"최근 출금합계: {account_state.recent_withdraw_krw:,}원",
+                f"최근 순입금: {account_state.net_cash_flow_krw:,}원",
+                f"투자 가능 현금: {account_state.investable_cash_krw:,}원",
             ])
         lines.extend([
             f"리스크 승인: {risk_approved}",
