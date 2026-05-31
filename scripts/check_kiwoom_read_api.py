@@ -38,11 +38,34 @@ def main() -> None:
 
     print("[Kiwoom Read API Check]")
     print(f"mode: {settings.trading_mode}")
-    print(f"account_no: {settings.account_no}")
-    print("현재가 조회: 498270")
-    print(market.get_current_price("498270"))
-    print("계좌 잔고 조회")
-    print(account.get_balance(settings.account_no))
+    print(f"account_no: {_mask_account(settings.account_no)}")
+
+    quote = market.get_current_price("498270")
+    latest = (quote.get("cntr_infr") or [{}])[0]
+    print("현재가 조회: OK")
+    print({
+        "symbol": "498270",
+        "cur_prc": latest.get("cur_prc") or quote.get("cur_prc"),
+        "pre_rt": latest.get("pre_rt") or quote.get("pre_rt"),
+        "return_code": quote.get("return_code"),
+        "return_msg": quote.get("return_msg"),
+    })
+
+    balance = account.get_balance(settings.account_no)
+    print("계좌 잔고 조회: OK")
+    print({
+        "prsm_dpst_aset_amt": balance.get("prsm_dpst_aset_amt"),
+        "tot_evlt_amt": balance.get("tot_evlt_amt"),
+        "positions_count": len(balance.get("acnt_evlt_remn_indv_tot") or []),
+        "return_code": balance.get("return_code"),
+        "return_msg": balance.get("return_msg"),
+    })
+
+
+def _mask_account(account_no: str) -> str:
+    if len(account_no) <= 4:
+        return "****"
+    return account_no[:2] + "***" + account_no[-2:]
 
 
 if __name__ == "__main__":

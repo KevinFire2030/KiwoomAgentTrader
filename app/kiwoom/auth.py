@@ -27,8 +27,11 @@ class KiwoomAuthClient:
             headers={"Content-Type": "application/json;charset=UTF-8"},
             json={"grant_type": "client_credentials", "appkey": self.app_key, "secretkey": self.secret_key},
         )
+        token_value = response.get("access_token") or response.get("token")
+        if not token_value:
+            raise RuntimeError(f"Kiwoom token response did not include token: return_code={response.get('return_code')} return_msg={response.get('return_msg')}")
         return KiwoomToken(
             token_type=str(response.get("token_type", "Bearer")),
-            access_token=str(response["access_token"]),
+            access_token=str(token_value),
             expires_in=int(response.get("expires_in", 0)),
         )

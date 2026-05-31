@@ -66,16 +66,18 @@ class KiwoomRestClient:
     def get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         return self.request("GET", path, params=params)
 
-    def post(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        return self.request("POST", path, payload=payload)
+    def post(self, path: str, payload: dict[str, Any] | None = None, api_id: str | None = None) -> dict[str, Any]:
+        return self.request("POST", path, payload=payload, api_id=api_id)
 
-    def request(self, method: str, path: str, payload: dict[str, Any] | None = None, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    def request(self, method: str, path: str, payload: dict[str, Any] | None = None, params: dict[str, Any] | None = None, api_id: str | None = None) -> dict[str, Any]:
         token = self.token_provider()
         headers = {
             "Content-Type": "application/json;charset=UTF-8",
-            "Authorization": f"{token.token_type} {token.access_token}",
+            "authorization": f"{token.token_type} {token.access_token}",
             "appkey": self.app_key,
         }
+        if api_id:
+            headers["api-id"] = api_id
         return self.transport.request(method, self._url(path), headers=headers, json=payload, params=params)
 
     def _url(self, path: str) -> str:

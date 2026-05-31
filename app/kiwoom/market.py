@@ -10,4 +10,4 @@ class KiwoomMarketClient:
         self.client = client
 
     def get_current_price(self, symbol: str) -> dict[str, Any]:
-        return self.client.get("/market/current-price", params={"symbol": symbol})
+        return self.client.post("/api/dostk/stkinfo", payload={"stk_cd": symbol}, api_id="ka10003")
