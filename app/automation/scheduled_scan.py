@@ -8,6 +8,7 @@ from typing import Callable, Protocol
 from zoneinfo import ZoneInfo
 
 from app.agents.models import WorkflowResult
+from app.automation.krx_calendar import load_krx_holidays_from_env
 from app.automation.operational_risk import OperationalRiskDecision, OperationalRiskGuard, OperationalRiskPolicy
 from app.storage.repository import TradingRepository
 from app.telegram.client import TelegramBotClient, TelegramTarget
@@ -44,11 +45,13 @@ class ScheduledScanConfig:
     market_open: time = time(9, 5)
     market_close: time = time(15, 10)
     holidays: frozenset[str] = field(default_factory=frozenset)
+    holiday_source: str = "manual"
+    holiday_warnings: tuple[str, ...] = ()
 
     @classmethod
     def from_env(cls) -> "ScheduledScanConfig":
         thread_raw = os.getenv("KIWOOM_TELEGRAM_THREAD_ID") or os.getenv("TELEGRAM_MESSAGE_THREAD_ID")
-        holidays = frozenset(_normalize_holiday(value) for value in _split_csv(os.getenv("KRX_HOLIDAYS", "")))
+        holiday_result = load_krx_holidays_from_env()
         return cls(
             symbol=os.getenv("KIWOOM_SCAN_SYMBOL", "498270"),
             mode=os.getenv("TRADING_MODE", "paper"),
@@ -62,7 +65,9 @@ class ScheduledScanConfig:
             max_daily_buy_amount_krw=int(os.getenv("MAX_DAILY_BUY_AMOUNT_KRW", "300000")),
             order_cooldown_minutes=int(os.getenv("ORDER_COOLDOWN_MINUTES", "30")),
             circuit_breaker_enabled=_env_bool("KIWOOM_CIRCUIT_BREAKER_ENABLED", True),
-            holidays=holidays,
+            holidays=holiday_result.holidays,
+            holiday_source=holiday_result.source,
+            holiday_warnings=holiday_result.warnings,
         )
 
     def with_overrides(self, **changes) -> "ScheduledScanConfig":

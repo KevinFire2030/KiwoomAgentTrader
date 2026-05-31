@@ -7,3 +7,4 @@ __pycache__/
 *.key
 *.secret
 data/*.db
+data/calendar/

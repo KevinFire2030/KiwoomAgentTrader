@@ -99,10 +99,10 @@ Current implementation status:
 - Order cooldown enforcement before scheduled scans: done
 - Daily executed-buy amount guard before scheduled scans: done
 - Scheduler/cron quiet wrapper: done
+- Dynamic KRX/Korea holiday calendar with cache fallback: done
 
 Remaining:
 
-- Dynamic KRX holiday calendar source
 - Daily realized-loss guard from real fill/position state
 - Post-fill circuit breaker automation
 
