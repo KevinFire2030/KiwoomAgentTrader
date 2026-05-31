@@ -20,6 +20,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("symbol", nargs="?", help="Symbol to scan, default KIWOOM_SCAN_SYMBOL or 498270")
     parser.add_argument("--force", action="store_true", help="Run even outside configured market scan hours")
     parser.add_argument("--no-send", action="store_true", help="Do not send Telegram; print notification text only")
+    parser.add_argument("--quiet-skip", action="store_true", help="Print nothing when the scan is skipped before workflow execution")
+    parser.add_argument("--quiet-no-notification", action="store_true", help="Print nothing when workflow runs but no Telegram notification is sent")
+    parser.add_argument("--quiet-after-send", action="store_true", help="Print nothing after a successful Telegram notification send")
     return parser.parse_args()
 
 
@@ -34,6 +37,12 @@ def main() -> None:
 
     telegram_client = NoSendTelegramClient() if args.no_send else None
     result = run_scheduled_scan(config, telegram_client=telegram_client)
+    if args.quiet_skip and result.status.startswith("skipped_"):
+        return
+    if args.quiet_no_notification and not result.notification_sent:
+        return
+    if args.quiet_after_send and result.notification_sent:
+        return
     print(result.message)
     print(f"status: {result.status}")
     print(f"notification_sent: {result.notification_sent}")

@@ -98,10 +98,10 @@ Current implementation status:
 - Runtime circuit breaker state: done
 - Order cooldown enforcement before scheduled scans: done
 - Daily executed-buy amount guard before scheduled scans: done
+- Scheduler/cron quiet wrapper: done
 
 Remaining:
 
-- Cron/system scheduler wiring
 - Dynamic KRX holiday calendar source
 - Daily realized-loss guard from real fill/position state
 - Post-fill circuit breaker automation

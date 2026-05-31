@@ -118,6 +118,7 @@ python3 scripts/run_telegram_approval_bridge.py --mode paper
 ```bash
 python3 scripts/run_scheduled_kiwoom_scan.py --no-send
 python3 scripts/run_scheduled_kiwoom_scan.py 498270
+scripts/cron_kiwoom_scan.sh
 ```
 
 환경 변수:
@@ -138,6 +139,7 @@ KRX_HOLIDAYS=2026-01-01,20260216
 - 운영 리스크 가드가 켜져 있으면 circuit breaker, 주문 cooldown, 일일 매수 한도를 먼저 검사합니다.
 - 티켓이 생성되면 알림에 `승인 TT-...` / `거절 TT-...` 명령이 포함됩니다.
 - `--no-send`는 Telegram API 호출 없이 알림 텍스트만 검증합니다.
+- `scripts/cron_kiwoom_scan.sh`는 scheduler용 wrapper이며, 장외/휴장/알림 없음/전송 성공 시 stdout을 비워 cron 알림 스팸을 막습니다.
 
 운영 circuit breaker는 아래 스크립트로 확인/변경합니다.
 
