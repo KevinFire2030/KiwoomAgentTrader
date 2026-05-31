@@ -19,6 +19,18 @@ class RealizedPnlEvent:
     occurred_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+@dataclass(frozen=True)
+class PostTradeAnalysisRecord:
+    ticket_id: str
+    run_id: str
+    symbol: str
+    outcome: str
+    realized_pnl_krw: int
+    summary: str
+    lessons: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS agent_runs (
     run_id TEXT PRIMARY KEY,
@@ -124,6 +136,18 @@ CREATE TABLE IF NOT EXISTS realized_pnl_events (
     raw_json TEXT NOT NULL,
     occurred_at TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS post_trade_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id TEXT NOT NULL,
+    run_id TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    outcome TEXT NOT NULL,
+    realized_pnl_krw INTEGER NOT NULL,
+    summary TEXT NOT NULL,
+    lessons_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
 );
 """
 
@@ -417,6 +441,50 @@ class TradingRepository:
         with self._connect() as conn:
             row = conn.execute(sql, params).fetchone()
             return int(row["total"] or 0)
+
+    def get_realized_pnl_events_for_ticket(self, ticket_id: str) -> list[sqlite3.Row]:
+        pattern = f'%"ticket_id": "{ticket_id}"%'
+        compact_pattern = f'%"ticket_id":"{ticket_id}"%'
+        with self._connect() as conn:
+            return list(
+                conn.execute(
+                    """
+                    SELECT * FROM realized_pnl_events
+                    WHERE raw_json LIKE ? OR raw_json LIKE ?
+                    ORDER BY occurred_at, id
+                    """,
+                    (pattern, compact_pattern),
+                ).fetchall()
+            )
+
+    def record_post_trade_analysis(self, record: PostTradeAnalysisRecord) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO post_trade_analyses (
+                    ticket_id, run_id, symbol, outcome, realized_pnl_krw,
+                    summary, lessons_json, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record.ticket_id,
+                    record.run_id,
+                    record.symbol,
+                    record.outcome,
+                    record.realized_pnl_krw,
+                    record.summary,
+                    json.dumps(record.lessons, ensure_ascii=False),
+                    record.created_at.isoformat(),
+                ),
+            )
+            return int(cursor.lastrowid or 0)
+
+    def get_latest_post_trade_analysis(self, ticket_id: str) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute(
+                "SELECT * FROM post_trade_analyses WHERE ticket_id = ? ORDER BY id DESC LIMIT 1",
+                (ticket_id,),
+            ).fetchone()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)

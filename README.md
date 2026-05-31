@@ -166,6 +166,12 @@ python3 scripts/record_realized_pnl_event.py \
   --source kiwoom_fill_sync
 ```
 
+사후 분석은 티켓, risk review, 주문 이벤트, `realized_pnl_events`를 연결해 리포트와 개선 메모를 생성하고 `post_trade_analyses`에 저장합니다. 손익 이벤트의 raw JSON에 `ticket_id`가 들어 있으면 해당 티켓 분석에 연결됩니다.
+
+```bash
+python3 scripts/analyze_trade_ticket.py TT-...
+```
+
 ## live_manual 주문 API 준비
 
 `live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.

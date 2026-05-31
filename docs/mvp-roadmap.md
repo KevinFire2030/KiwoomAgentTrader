@@ -110,3 +110,14 @@ Remaining:
 ## MVP 6 — Post-Trade Analysis Loop
 
 체결 이후 사후 분석을 통해 전략 개선점을 저장한다.
+
+Current implementation status:
+
+- Ticket/run/order event/realized P&L based post-trade analysis: done
+- `post_trade_analyses` persistence: done
+- CLI report generation: done (`scripts/analyze_trade_ticket.py`)
+
+Remaining:
+
+- Daily Telegram post-trade digest
+- Strategy improvement memory/export loop
