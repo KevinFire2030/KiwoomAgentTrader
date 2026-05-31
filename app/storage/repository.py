@@ -225,6 +225,15 @@ class TradingRepository:
         with self._connect() as conn:
             return conn.execute("SELECT * FROM trade_tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()
 
+    def list_trade_tickets_by_status(self, status: str) -> list[sqlite3.Row]:
+        with self._connect() as conn:
+            return list(
+                conn.execute(
+                    "SELECT * FROM trade_tickets WHERE status = ? ORDER BY created_at DESC, ticket_id DESC",
+                    (status,),
+                ).fetchall()
+            )
+
     def record_market_snapshot(self, run_id: str, snapshot: MarketSnapshot) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -489,6 +498,10 @@ class TradingRepository:
     def list_post_trade_analyses(self) -> list[sqlite3.Row]:
         with self._connect() as conn:
             return list(conn.execute("SELECT * FROM post_trade_analyses ORDER BY created_at, id").fetchall())
+
+    def get_latest_post_trade_analysis_record(self) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute("SELECT * FROM post_trade_analyses ORDER BY created_at DESC, id DESC LIMIT 1").fetchone()
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, factory=ClosingConnection)

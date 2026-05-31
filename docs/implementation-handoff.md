@@ -237,18 +237,23 @@ Implemented:
 - Strategy improvement lesson export loop.
 - Markdown strategy lesson artifact at `docs/strategy-lessons.md`, grouped by KST date/symbol/outcome, preserving source ticket IDs.
 - Generated strategy lesson block markers preserve any manual notes outside the block.
+- Read-only automation health/status command.
+- Status summary includes trading mode/live gate, latest market/account snapshot timestamps, circuit breaker, pending approval ticket count/latest pending ticket, latest post-trade analysis, and strategy lesson artifact availability.
 
 Important files:
 
 - `app/analysis/post_trade.py`
 - `app/analysis/post_trade_digest.py`
 - `app/analysis/strategy_lessons.py`
+- `app/automation/status.py`
 - `scripts/analyze_trade_ticket.py`
 - `scripts/send_daily_post_trade_digest.py`
 - `scripts/export_strategy_lessons.py`
+- `scripts/show_automation_status.py`
 - `tests/test_post_trade_analysis.py`
 - `tests/test_post_trade_digest.py`
 - `tests/test_strategy_lessons_export.py`
+- `tests/test_automation_status.py`
 - `docs/strategy-lessons.md`
 - `app/storage/repository.py` (`post_trade_analyses`, `PostTradeAnalysisRecord`)
 
@@ -258,6 +263,7 @@ Usage:
 python3 scripts/analyze_trade_ticket.py TT-...
 python3 scripts/send_daily_post_trade_digest.py --date 2026-06-01 --no-send
 python3 scripts/export_strategy_lessons.py
+python3 scripts/show_automation_status.py
 ```
 
 Linking rule:
@@ -279,25 +285,24 @@ Linking rule:
 
 ## What remains to implement next
 
-### Next immediate task: Dashboard/status command for automation health
+### Next immediate task: Real fill/position sync hardening
 
 Goal:
 
-- Add a read-only health/status command that summarizes current automation readiness without placing orders.
+- Replace manual/simulated realized P&L events with read-first Kiwoom fill/position synchronization where possible.
 
 Recommended behavior:
 
-- Show current trading mode and whether live trading is disabled/enabled.
-- Show latest market/account snapshot timestamps if available.
-- Show runtime circuit breaker state and reason.
-- Show pending approval tickets count or latest pending ticket.
-- Show latest post-trade digest/strategy lesson export availability.
-- Keep account numbers masked and avoid credential output.
+- Inspect and verify Kiwoom REST read endpoints for order/fill history before coding assumptions.
+- Map broker order/fill identifiers back to local ticket IDs conservatively.
+- Persist raw broker read snapshots separately from derived realized P&L events.
+- Keep live order submission disabled; this is read/sync work only.
+- Add idempotency so repeated sync runs do not duplicate realized P&L events.
+- Keep account numbers masked and credentials out of logs.
 - Do not call live order API.
 
 ### Later hardening
 
-- Real fill/position sync from Kiwoom endpoints, not just manual/simulated `RealizedPnlEvent` records.
 - More robust mapping from broker order/fill IDs to ticket IDs.
 - CI workflow if not already present.
 - Optional live order enablement checklist, only with explicit user approval.
@@ -312,22 +317,21 @@ Use this in a fresh session after 5h usage quota resets:
 
 저장소는 /mnt/e/KiwoomAgentTrader 이고,
 현재 구현 상태는 docs/implementation-handoff.md 와 docs/mvp-roadmap.md 를 먼저 읽어서 파악해줘.
-현재 MVP6 post-trade analysis loop, Daily Telegram post-trade digest, Strategy improvement lesson export까지 완료됐고,
-다음 단계는 Dashboard/status command for automation health 구현이야.
+현재 MVP6 post-trade analysis loop, Daily Telegram post-trade digest, Strategy improvement lesson export, Dashboard/status command까지 완료됐고,
+다음 단계는 Real fill/position sync hardening 구현이야.
 
 요구사항:
 1. TDD로 실패 테스트 먼저 작성하고 확인
-2. 현재 trading mode와 live trading gate 상태 요약
-3. 최신 market/account snapshot 시각 요약
-4. runtime circuit breaker 상태/사유 요약
-5. pending approval ticket 개수 또는 최신 pending ticket 요약
-6. latest post-trade/strategy lesson artifact 상태 요약
-7. 계좌번호/credential은 출력하지 말고 마스킹/비출력 유지
-8. 실주문 API는 호출하지 않는 read-only command로 구현
-9. 전체 테스트 실행
-10. Kiwoom read API smoke 확인
-11. README/docs 업데이트
-12. commit/push까지 완료
+2. 키움 REST의 체결/주문/잔고 관련 read endpoint를 먼저 확인하고 가정은 문서화
+3. broker order/fill identifier와 local ticket ID를 보수적으로 매핑
+4. raw broker read snapshot과 derived realized P&L event를 분리 저장
+5. 반복 실행 시 realized_pnl_events가 중복 생성되지 않도록 idempotency 적용
+6. 계좌번호/credential은 출력하지 말고 마스킹/비출력 유지
+7. 실주문 API는 호출하지 않는 read/sync command로 구현
+8. 전체 테스트 실행
+9. Kiwoom read API smoke 확인
+10. README/docs 업데이트
+11. commit/push까지 완료
 
 실주문 API는 호출하지 말고, read API와 로컬 DB/테스트만 사용해.
 ```
@@ -338,6 +342,7 @@ Use this in a fresh session after 5h usage quota resets:
 cd /mnt/e/KiwoomAgentTrader
 git status --short --branch
 python3 -m unittest discover -s tests
+python3 scripts/show_automation_status.py
 python3 scripts/send_daily_post_trade_digest.py --no-send
 python3 scripts/export_strategy_lessons.py
 python3 scripts/check_kiwoom_read_api.py

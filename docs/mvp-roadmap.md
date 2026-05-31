@@ -120,8 +120,9 @@ Current implementation status:
 - KST-day aggregation with total realized P&L, win/loss/flat counts, best/worst ticket, top lessons, and circuit breaker state: done
 - Strategy improvement lesson export loop: done (`scripts/export_strategy_lessons.py`, `docs/strategy-lessons.md`)
 - KST date/symbol/outcome grouping with source ticket IDs preserved: done
+- Read-only automation health/status command: done (`scripts/show_automation_status.py`)
 
 Remaining:
 
 - Real fill/position sync hardening
-- Dashboard/status command for automation health
+- CI workflow

@@ -188,6 +188,13 @@ python3 scripts/export_strategy_lessons.py
 python3 scripts/export_strategy_lessons.py --output docs/strategy-lessons.md
 ```
 
+자동화 상태 명령은 로컬 DB와 artifact만 읽어 현재 운영 준비 상태를 요약합니다. trading mode/live gate, 최신 snapshot 시각, circuit breaker, 승인 대기 티켓, 사후 분석/전략 메모 상태를 보여주며 Kiwoom 주문 API는 호출하지 않습니다.
+
+```bash
+python3 scripts/show_automation_status.py
+python3 scripts/show_automation_status.py --symbol 498270
+```
+
 ## live_manual 주문 API 준비
 
 `live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.
