@@ -2,4 +2,8 @@ __pycache__/
 *.py[cod]
 .venv/
 .env
+*_appkey.txt
+*_secretkey.txt
+*.key
+*.secret
 data/*.db
