@@ -157,6 +157,15 @@ python3 scripts/manage_runtime_risk.py on --reason "manual halt"
 python3 scripts/manage_runtime_risk.py off --reason "resume scans"
 ```
 
+체결/포지션 동기화 후 실현손익 이벤트를 기록하면 post-fill circuit breaker가 즉시 적용됩니다. 당일 실현손익 합계가 `-MAX_DAILY_LOSS_KRW` 이하이면 `runtime_state.circuit_breaker=on`으로 전환되어 이후 정기 스캔이 자동 차단됩니다.
+
+```bash
+python3 scripts/record_realized_pnl_event.py \
+  --symbol 498270 \
+  --realized-pnl -55000 \
+  --source kiwoom_fill_sync
+```
+
 ## live_manual 주문 API 준비
 
 `live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.

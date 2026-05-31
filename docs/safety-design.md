@@ -37,7 +37,7 @@ Trade Execution Agent는 티켓 존재, risk approval, 만료 전, 허용 종목
 
 ## Failure Handling
 
-Kiwoom API 인증 실패, 계좌/포지션 검증 실패, 정책 로드 실패, 중복 티켓/주문 감지, 일일 손실 한도 도달, 주문 전 로그 저장 실패 시 모든 신규 주문을 차단한다.
+Kiwoom API 인증 실패, 계좌/포지션 검증 실패, 정책 로드 실패, 중복 티켓/주문 감지, 일일 손실 한도 도달, 주문 전 로그 저장 실패 시 모든 신규 주문을 차단한다. 체결/포지션 동기화에서 당일 실현손실 한도 초과가 감지되면 post-fill circuit breaker가 `runtime_state.circuit_breaker=on`으로 전환해 후속 정기 스캔을 차단한다.
 
 ## Audit Trail
 

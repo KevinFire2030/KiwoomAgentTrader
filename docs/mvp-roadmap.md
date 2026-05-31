@@ -101,10 +101,11 @@ Current implementation status:
 - Scheduler/cron quiet wrapper: done
 - Dynamic KRX/Korea holiday calendar with cache fallback: done
 - Daily realized-loss guard from real fill/position state: done
+- Post-fill circuit breaker automation: done
 
 Remaining:
 
-- Post-fill circuit breaker automation
+- MVP 6 post-trade analysis loop
 
 ## MVP 6 — Post-Trade Analysis Loop
 
