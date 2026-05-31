@@ -166,6 +166,19 @@ python3 scripts/record_realized_pnl_event.py \
   --source kiwoom_fill_sync
 ```
 
+키움 read endpoint에서 가져온 거래/체결 후보 row를 기반으로 실현손익 이벤트를 동기화할 수 있습니다. 기본은 `--dry-run`이며, `--apply`를 명시해야 DB에 raw broker snapshot과 derived `realized_pnl_events`가 저장됩니다. dedupe key를 사용해 반복 실행 중복 기록을 방지합니다.
+
+```bash
+python3 scripts/sync_kiwoom_fills.py --dry-run
+python3 scripts/sync_kiwoom_fills.py --apply
+```
+
+개장 직전/직후 read-only 리허설은 아래 명령으로 상태 확인, Kiwoom read API, paper scan, fill sync dry-run을 순서대로 실행합니다. 이 명령은 Kiwoom 주문 API를 호출하지 않습니다.
+
+```bash
+python3 scripts/run_market_open_rehearsal.py
+```
+
 사후 분석은 티켓, risk review, 주문 이벤트, `realized_pnl_events`를 연결해 리포트와 개선 메모를 생성하고 `post_trade_analyses`에 저장합니다. 손익 이벤트의 raw JSON에 `ticket_id`가 들어 있으면 해당 티켓 분석에 연결됩니다.
 
 ```bash

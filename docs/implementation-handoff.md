@@ -239,6 +239,9 @@ Implemented:
 - Generated strategy lesson block markers preserve any manual notes outside the block.
 - Read-only automation health/status command.
 - Status summary includes trading mode/live gate, latest market/account snapshot timestamps, circuit breaker, pending approval ticket count/latest pending ticket, latest post-trade analysis, and strategy lesson artifact availability.
+- Read-first fill/P&L sync hardening.
+- `sync_kiwoom_fills.py` derives realized P&L events from Kiwoom transaction/fill-like rows, stores raw broker snapshots separately, masks account fields/free-text account numbers, and uses dedupe keys for idempotency.
+- Market-open rehearsal command chains status, read API smoke, scheduled paper scan, and fill-sync dry-run without calling order APIs.
 
 Important files:
 
@@ -246,14 +249,19 @@ Important files:
 - `app/analysis/post_trade_digest.py`
 - `app/analysis/strategy_lessons.py`
 - `app/automation/status.py`
+- `app/automation/fill_sync.py`
 - `scripts/analyze_trade_ticket.py`
 - `scripts/send_daily_post_trade_digest.py`
 - `scripts/export_strategy_lessons.py`
 - `scripts/show_automation_status.py`
+- `scripts/sync_kiwoom_fills.py`
+- `scripts/run_market_open_rehearsal.py`
 - `tests/test_post_trade_analysis.py`
 - `tests/test_post_trade_digest.py`
 - `tests/test_strategy_lessons_export.py`
 - `tests/test_automation_status.py`
+- `tests/test_kiwoom_fill_sync.py`
+- `tests/test_market_open_rehearsal.py`
 - `docs/strategy-lessons.md`
 - `app/storage/repository.py` (`post_trade_analyses`, `PostTradeAnalysisRecord`)
 
@@ -264,11 +272,14 @@ python3 scripts/analyze_trade_ticket.py TT-...
 python3 scripts/send_daily_post_trade_digest.py --date 2026-06-01 --no-send
 python3 scripts/export_strategy_lessons.py
 python3 scripts/show_automation_status.py
+python3 scripts/sync_kiwoom_fills.py --dry-run
+python3 scripts/run_market_open_rehearsal.py
 ```
 
 Linking rule:
 
 - `realized_pnl_events.raw_json` should include `{"ticket_id": "TT-..."}` so P&L events can be connected to tickets.
+- Fill-sync derived events include `dedupe_key` in `realized_pnl_events.raw_json` to prevent duplicate recording.
 
 ## Current DB tables of interest
 
@@ -282,22 +293,23 @@ Linking rule:
 - `runtime_state`
 - `realized_pnl_events`
 - `post_trade_analyses`
+- `broker_fill_sync_snapshots`
 
 ## What remains to implement next
 
-### Next immediate task: Real fill/position sync hardening
+### Next immediate task: Real Kiwoom broker fill field mapping refinement
 
 Goal:
 
-- Replace manual/simulated realized P&L events with read-first Kiwoom fill/position synchronization where possible.
+- After real/manual live order data exists, refine exact Kiwoom response field mapping for fills, order ids, fill ids, prices, quantities, fees, and taxes.
 
 Recommended behavior:
 
-- Inspect and verify Kiwoom REST read endpoints for order/fill history before coding assumptions.
-- Map broker order/fill identifiers back to local ticket IDs conservatively.
-- Persist raw broker read snapshots separately from derived realized P&L events.
-- Keep live order submission disabled; this is read/sync work only.
-- Add idempotency so repeated sync runs do not duplicate realized P&L events.
+- Capture sanitized sample rows from `sync_kiwoom_fills.py --dry-run` after actual broker rows exist.
+- Update field aliases in `app/automation/fill_sync.py` based on verified response keys.
+- Strengthen ticket/order/fill id mapping once broker ids are visible.
+- Keep raw snapshots separate from derived realized P&L events.
+- Preserve idempotency for repeated sync runs.
 - Keep account numbers masked and credentials out of logs.
 - Do not call live order API.
 
@@ -317,21 +329,20 @@ Use this in a fresh session after 5h usage quota resets:
 
 저장소는 /mnt/e/KiwoomAgentTrader 이고,
 현재 구현 상태는 docs/implementation-handoff.md 와 docs/mvp-roadmap.md 를 먼저 읽어서 파악해줘.
-현재 MVP6 post-trade analysis loop, Daily Telegram post-trade digest, Strategy improvement lesson export, Dashboard/status command까지 완료됐고,
-다음 단계는 Real fill/position sync hardening 구현이야.
+현재 MVP6 reporting/status/fill-sync rehearsal까지 완료됐고,
+다음 단계는 Real Kiwoom broker fill field mapping refinement 또는 CI workflow 구현이야.
 
 요구사항:
-1. TDD로 실패 테스트 먼저 작성하고 확인
-2. 키움 REST의 체결/주문/잔고 관련 read endpoint를 먼저 확인하고 가정은 문서화
-3. broker order/fill identifier와 local ticket ID를 보수적으로 매핑
-4. raw broker read snapshot과 derived realized P&L event를 분리 저장
-5. 반복 실행 시 realized_pnl_events가 중복 생성되지 않도록 idempotency 적용
-6. 계좌번호/credential은 출력하지 말고 마스킹/비출력 유지
-7. 실주문 API는 호출하지 않는 read/sync command로 구현
-8. 전체 테스트 실행
-9. Kiwoom read API smoke 확인
-10. README/docs 업데이트
-11. commit/push까지 완료
+1. 실제 broker row가 생기면 `sync_kiwoom_fills.py --dry-run` 출력/DB snapshot을 근거로 필드명을 검증
+2. fill/order id, 가격, 수량, 수수료, 세금, realized P&L 필드 alias를 보강
+3. local ticket ID 매핑 규칙을 broker id 기준으로 더 엄격하게 개선
+4. 기존 dedupe/idempotency 보존
+5. 계좌번호/credential은 출력하지 말고 마스킹/비출력 유지
+6. 실주문 API는 호출하지 않는 read/sync command로 유지
+7. 전체 테스트 실행
+8. Kiwoom read API smoke 확인
+9. README/docs 업데이트
+10. commit/push까지 완료
 
 실주문 API는 호출하지 말고, read API와 로컬 DB/테스트만 사용해.
 ```
@@ -343,6 +354,8 @@ cd /mnt/e/KiwoomAgentTrader
 git status --short --branch
 python3 -m unittest discover -s tests
 python3 scripts/show_automation_status.py
+python3 scripts/run_market_open_rehearsal.py --skip-scan
+python3 scripts/sync_kiwoom_fills.py --dry-run
 python3 scripts/send_daily_post_trade_digest.py --no-send
 python3 scripts/export_strategy_lessons.py
 python3 scripts/check_kiwoom_read_api.py

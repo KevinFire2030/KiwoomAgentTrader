@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS post_trade_analyses (
     lessons_json TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS broker_fill_sync_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dedupe_key TEXT NOT NULL UNIQUE,
+    source TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    raw_json TEXT NOT NULL,
+    captured_at TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -435,6 +445,63 @@ class TradingRepository:
                 ),
             )
             return int(cursor.lastrowid or 0)
+
+    def record_realized_pnl_event_once(self, event: RealizedPnlEvent, dedupe_key: str) -> int | None:
+        event_raw = dict(event.raw)
+        event_raw["dedupe_key"] = dedupe_key
+        if self.has_realized_pnl_dedupe_key(dedupe_key):
+            return None
+        return self.record_realized_pnl_event(
+            RealizedPnlEvent(
+                symbol=event.symbol,
+                realized_pnl_krw=event.realized_pnl_krw,
+                source=event.source,
+                raw=event_raw,
+                occurred_at=event.occurred_at,
+            )
+        )
+
+    def has_realized_pnl_dedupe_key(self, dedupe_key: str) -> bool:
+        pattern = f'%"dedupe_key": "{dedupe_key}"%'
+        compact_pattern = f'%"dedupe_key":"{dedupe_key}"%'
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM realized_pnl_events WHERE raw_json LIKE ? OR raw_json LIKE ? LIMIT 1",
+                (pattern, compact_pattern),
+            ).fetchone()
+            return row is not None
+
+    def count_realized_pnl_events(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM realized_pnl_events").fetchone()
+            return int(row["count"] or 0)
+
+    def record_broker_fill_sync_snapshot(
+        self,
+        *,
+        dedupe_key: str,
+        source: str,
+        symbol: str,
+        raw: dict[str, Any],
+        captured_at: datetime,
+    ) -> int | None:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT OR IGNORE INTO broker_fill_sync_snapshots (
+                    dedupe_key, source, symbol, raw_json, captured_at
+                ) VALUES (?, ?, ?, ?, ?)
+                """,
+                (dedupe_key, source, symbol, json.dumps(raw, ensure_ascii=False), captured_at.isoformat()),
+            )
+            if cursor.rowcount == 0:
+                return None
+            return int(cursor.lastrowid or 0)
+
+    def count_broker_fill_sync_snapshots(self) -> int:
+        with self._connect() as conn:
+            row = conn.execute("SELECT COUNT(*) AS count FROM broker_fill_sync_snapshots").fetchone()
+            return int(row["count"] or 0)
 
     def sum_realized_pnl(self, start_iso: str, end_iso: str, symbol: str | None = None) -> int:
         sql = """

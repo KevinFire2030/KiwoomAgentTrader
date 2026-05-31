@@ -121,8 +121,10 @@ Current implementation status:
 - Strategy improvement lesson export loop: done (`scripts/export_strategy_lessons.py`, `docs/strategy-lessons.md`)
 - KST date/symbol/outcome grouping with source ticket IDs preserved: done
 - Read-only automation health/status command: done (`scripts/show_automation_status.py`)
+- Read-first fill/P&L sync hardening: done (`scripts/sync_kiwoom_fills.py`)
+- Market-open rehearsal command: done (`scripts/run_market_open_rehearsal.py`)
 
 Remaining:
 
-- Real fill/position sync hardening
+- Real Kiwoom broker fill field mapping refinement after live/manual order data exists
 - CI workflow
