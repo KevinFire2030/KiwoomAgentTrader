@@ -18,7 +18,7 @@
 
 - `advisory`: 분석 리포트만 생성한다.
 - `paper`: Trade Ticket과 paper order를 생성한다. 키움 주문 API는 호출하지 않는다.
-- `live_manual`: Risk 승인 + 사용자 승인 후에만 실제 주문한다.
+- `live_manual`: Risk 승인 + 사용자 승인 후 `live_manual_ready` 상태까지 준비한다. 실제 키움 주문 제출은 `ENABLE_LIVE_TRADING=true`가 별도로 켜져야 한다.
 - `live_auto`: 제한된 종목/금액/시간 조건 안에서만 자동 주문한다. MVP 범위에서 제외한다.
 
 ## Risk Policy Defaults

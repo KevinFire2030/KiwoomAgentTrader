@@ -20,6 +20,7 @@
 - 주문 권한은 Trade Execution Agent에만 부여
 - Risk Management Agent 승인 없는 주문 금지
 - live_manual 전까지 키움 주문 API 호출 금지
+- live_manual에서도 `ENABLE_LIVE_TRADING=true` 없이는 주문 API 제출 금지
 - 모든 판단과 주문은 로그/DB에 저장
 
 ## 문서
@@ -109,6 +110,16 @@ python3 scripts/run_telegram_approval_bridge.py --mode paper
 ```
 
 주의: 동일 Bot token을 Hermes Gateway가 이미 polling 중이면 Telegram `getUpdates` long polling은 한 프로세스만 사용하세요. Hermes Gateway와 병행 운영할 때는 webhook/update JSON 진입점 또는 전용 승인 봇 token을 사용합니다.
+
+## live_manual 주문 API 준비
+
+`live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.
+
+```bash
+python3 scripts/prepare_live_order_request.py TT-...
+```
+
+이 스크립트는 키움 주문 API를 호출하지 않고, `/api/dostk/ordr` 요청 endpoint/api-id/payload만 출력합니다. 실제 주문 제출은 별도 `ENABLE_LIVE_TRADING=true` 게이트가 켜져야 하며, 기본값은 항상 OFF입니다.
 
 저장되는 데이터:
 

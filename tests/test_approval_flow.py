@@ -106,6 +106,33 @@ class ApprovalFlowTest(unittest.TestCase):
             self.assertFalse(second.accepted)
             self.assertIn("이미 paper 실행", second.message)
 
+    def test_live_manual_approval_marks_ticket_ready_without_submitting_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            ticket = TradeTicket(
+                "TT-test-live-ready-001",
+                "498270",
+                "buy",
+                2,
+                "limit",
+                18600,
+                "trading_strategy_agent",
+                risk_approved=True,
+                risk_approved_by="risk_management_agent",
+                status="pending_user_approval",
+            )
+            repo.record_trade_ticket("run-001", ticket)
+
+            result = ApprovalWorkflow(repo).handle_text("승인 TT-test-live-ready-001", mode="live_manual")
+
+            self.assertTrue(result.accepted)
+            self.assertIn("live_manual_ready:TT-test-live-ready-001", result.message)
+            stored = repo.get_trade_ticket("TT-test-live-ready-001")
+            self.assertIsNotNone(stored)
+            self.assertEqual(stored["user_approved"], 1)
+            self.assertEqual(stored["status"], "live_manual_ready")
+
 
 if __name__ == "__main__":
     unittest.main()

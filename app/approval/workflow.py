@@ -33,6 +33,10 @@ class ApprovalWorkflow:
         current_status = row["status"]
         if current_status == "paper_executed":
             return ApprovalResult(False, command.action, command.ticket_id, f"이미 paper 실행된 티켓입니다: {command.ticket_id}")
+        if current_status == "live_manual_ready":
+            return ApprovalResult(False, command.action, command.ticket_id, f"이미 live_manual 준비 상태인 티켓입니다: {command.ticket_id}")
+        if current_status == "live_order_submitted":
+            return ApprovalResult(False, command.action, command.ticket_id, f"이미 실주문 제출된 티켓입니다: {command.ticket_id}")
         if current_status == "user_rejected":
             return ApprovalResult(False, command.action, command.ticket_id, f"이미 거절된 티켓입니다: {command.ticket_id}")
 
@@ -44,10 +48,15 @@ class ApprovalWorkflow:
             return ApprovalResult(False, "approve", command.ticket_id, f"리스크 승인 전 티켓은 승인할 수 없습니다: {command.ticket_id}")
 
         ticket = self._ticket_from_row(row, user_approved=True, status="user_approved")
+        execution_agent = TradeExecutionAgent()
         if mode == "paper":
-            execution_result = TradeExecutionAgent().execute_paper(ticket)
+            execution_result = execution_agent.execute_paper(ticket)
             self.repository.update_trade_ticket_approval(command.ticket_id, True, "paper_executed")
             return ApprovalResult(True, "approve", command.ticket_id, f"승인 및 paper 실행 완료: {execution_result}")
+        if mode == "live_manual":
+            execution_result = execution_agent.prepare_live_manual(ticket)
+            self.repository.update_trade_ticket_approval(command.ticket_id, True, "live_manual_ready")
+            return ApprovalResult(True, "approve", command.ticket_id, f"승인 완료, live_manual 주문 준비 상태: {execution_result}")
 
         self.repository.update_trade_ticket_approval(command.ticket_id, True, "user_approved")
         return ApprovalResult(True, "approve", command.ticket_id, f"승인 처리 완료: {command.ticket_id}")
