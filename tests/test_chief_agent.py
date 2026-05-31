@@ -17,7 +17,7 @@ class ChiefInvestmentAgentTest(unittest.TestCase):
             self.assertTrue(result.risk_review.approved)
             self.assertIsNotNone(result.ticket)
             self.assertIn("Chief Investment Agent", result.report)
-            self.assertIn("paper_order_recorded", result.report)
+            self.assertIn("pending_user_approval", result.report)
             self.assertIsNotNone(repo.get_agent_run(result.run_id))
             self.assertIsNotNone(repo.get_trade_ticket(result.ticket.ticket_id))
             self.assertIsNotNone(repo.get_latest_risk_review(result.ticket.ticket_id))

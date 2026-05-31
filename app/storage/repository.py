@@ -146,6 +146,17 @@ class TradingRepository:
                 ),
             )
 
+    def update_trade_ticket_approval(self, ticket_id: str, user_approved: bool, status: str) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE trade_tickets
+                SET user_approved = ?, status = ?
+                WHERE ticket_id = ?
+                """,
+                (int(user_approved), status, ticket_id),
+            )
+
     def get_trade_ticket(self, ticket_id: str) -> sqlite3.Row | None:
         with self._connect() as conn:
             return conn.execute("SELECT * FROM trade_tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()

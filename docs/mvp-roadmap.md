@@ -65,6 +65,14 @@ Expected result: token is issued, `498270` current price is printed, account bal
 
 Approval command text 생성, `승인 TT-...` / `거절 TT-...` 파싱, ticket status 업데이트, execution result 알림.
 
+Current implementation status:
+
+- Korean approval/rejection parser: done
+- Ticket user approval/rejection status update: done
+- Paper-mode approval execution: done
+- CLI handler script for Telegram text payload simulation: done
+- Actual Telegram gateway webhook binding: pending
+
 ## MVP 4 — live_manual Order Execution
 
 `ENABLE_LIVE_TRADING=true`, `TRADING_MODE=live_manual`, risk approved, user approved, allowed symbol 조건에서만 실행.

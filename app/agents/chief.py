@@ -7,7 +7,6 @@ from app.agents.market_analysis import MarketAnalysisAgent
 from app.agents.models import AccountSnapshot, AccountState, MarketSnapshot, WorkflowResult
 from app.agents.risk_management import RiskManagementAgent
 from app.agents.stock_recommendation import StockRecommendationAgent
-from app.agents.trade_execution import TradeExecutionAgent
 from app.agents.trading_strategy import TradingStrategyAgent
 from app.policies.risk_policy import RiskPolicy
 from app.storage.repository import TradingRepository
@@ -37,8 +36,8 @@ class ChiefInvestmentAgent:
 
         ticket = risk_review.ticket if risk_review.approved else None
         execution_result = "not_executed"
-        if mode == "paper" and ticket is not None:
-            execution_result = TradeExecutionAgent().execute_paper(ticket)
+        if ticket is not None:
+            execution_result = "pending_user_approval"
 
         report = self._format_report(
             run_id,

@@ -8,7 +8,7 @@ class WorkflowTest(unittest.TestCase):
         result = run_intraday_signal_scan("498270", mode="paper")
         self.assertTrue(result.risk_review.approved)
         self.assertIsNotNone(result.ticket)
-        self.assertIn("paper_order_recorded", result.report)
+        self.assertIn("pending_user_approval", result.report)
 
 
 if __name__ == "__main__":

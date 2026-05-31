@@ -74,6 +74,17 @@ Risk Management Agent는 Account State를 사용해 다음 안전 규칙을 적�
 - 최근 1년 출금액이 입금액보다 크면 `medium` 리스크로 보수적 표시
 - 1회 주문 최대 금액 한도 초과 시 수량 축소 또는 거절
 
+## Telegram 승인/거절 명령 처리
+
+생성된 리스크 승인 티켓은 Telegram 명령 형식으로 승인/거절할 수 있습니다.
+
+```bash
+python3 scripts/handle_approval_command.py '승인 TT-...'
+python3 scripts/handle_approval_command.py '거절 TT-...'
+```
+
+현재 `paper` 모드에서는 승인된 티켓만 `paper_executed` 상태로 바뀌고, 실제 키움 주문 API는 호출하지 않습니다.
+
 저장되는 데이터:
 
 - `market_snapshots`: 현재가, 등락률, 원본 응답 JSON
