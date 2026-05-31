@@ -33,7 +33,7 @@ class ChiefInvestmentAgent:
         market = MarketAnalysisAgent().analyze()
         recommendation = StockRecommendationAgent().recommend(symbol)
         ticket_candidate = TradingStrategyAgent().create_ticket_candidate(run_id, market, recommendation, market_snapshot=market_snapshot)
-        risk_review = RiskManagementAgent(RiskPolicy(mode=mode)).review(ticket_candidate)
+        risk_review = RiskManagementAgent(RiskPolicy(mode=mode)).review(ticket_candidate, account_state=account_state)
 
         ticket = risk_review.ticket if risk_review.approved else None
         execution_result = "not_executed"

@@ -21,6 +21,7 @@ Current implementation status:
 - Stock Recommendation Agent for one-symbol universe: done
 - Trading Strategy Agent candidate ticket generation: done
 - Risk Management Agent policy checks: done
+- Account State aware risk shrinking/rejection: done
 - Paper Trade Execution Agent: done
 - Telegram-ready report text: initial CLI report done
 - SQLite decision-trail persistence: agent run, trade ticket, risk review done
