@@ -81,6 +81,30 @@ class ApprovalFlowTest(unittest.TestCase):
             self.assertIn("리스크 승인 전", result.message)
             stored = repo.get_trade_ticket("TT-test-no-risk")
             self.assertEqual(stored["status"], "draft")
+    def test_approval_is_not_replayed_after_paper_execution(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = TradingRepository(Path(tmp) / "trading.db")
+            repo.initialize()
+            ticket = TradeTicket(
+                "TT-test-replay-001",
+                "498270",
+                "buy",
+                3,
+                "limit",
+                18600,
+                "trading_strategy_agent",
+                risk_approved=True,
+                risk_approved_by="risk_management_agent",
+                status="pending_user_approval",
+            )
+            repo.record_trade_ticket("run-001", ticket)
+
+            first = ApprovalWorkflow(repo).handle_text("승인 TT-test-replay-001", mode="paper")
+            second = ApprovalWorkflow(repo).handle_text("승인 TT-test-replay-001", mode="paper")
+
+            self.assertTrue(first.accepted)
+            self.assertFalse(second.accepted)
+            self.assertIn("이미 paper 실행", second.message)
 
 
 if __name__ == "__main__":

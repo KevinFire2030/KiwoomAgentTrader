@@ -85,6 +85,31 @@ python3 scripts/handle_approval_command.py '거절 TT-...'
 
 현재 `paper` 모드에서는 승인된 티켓만 `paper_executed` 상태로 바뀌고, 실제 키움 주문 API는 호출하지 않습니다.
 
+## Telegram Gateway 실제 연결
+
+Telegram 메시지 update를 approval workflow에 직접 연결할 수 있습니다. 대상 채팅/토픽은 `.env`에 고정해 다른 방의 명령이 실행되지 않게 합니다.
+
+```bash
+TELEGRAM_BOT_TOKEN=...
+KIWOOM_TELEGRAM_CHAT_ID=-100...
+KIWOOM_TELEGRAM_THREAD_ID=502
+KIWOOM_TRADING_DB=data/trading.db
+```
+
+Webhook/update JSON 1건 처리:
+
+```bash
+cat telegram_update.json | python3 scripts/handle_telegram_approval_update.py --send
+```
+
+전용 봇으로 long polling bridge 실행:
+
+```bash
+python3 scripts/run_telegram_approval_bridge.py --mode paper
+```
+
+주의: 동일 Bot token을 Hermes Gateway가 이미 polling 중이면 Telegram `getUpdates` long polling은 한 프로세스만 사용하세요. Hermes Gateway와 병행 운영할 때는 webhook/update JSON 진입점 또는 전용 승인 봇 token을 사용합니다.
+
 저장되는 데이터:
 
 - `market_snapshots`: 현재가, 등락률, 원본 응답 JSON

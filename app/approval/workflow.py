@@ -30,6 +30,12 @@ class ApprovalWorkflow:
         if row is None:
             return ApprovalResult(False, command.action, command.ticket_id, f"티켓을 찾을 수 없습니다: {command.ticket_id}")
 
+        current_status = row["status"]
+        if current_status == "paper_executed":
+            return ApprovalResult(False, command.action, command.ticket_id, f"이미 paper 실행된 티켓입니다: {command.ticket_id}")
+        if current_status == "user_rejected":
+            return ApprovalResult(False, command.action, command.ticket_id, f"이미 거절된 티켓입니다: {command.ticket_id}")
+
         if command.action == "reject":
             self.repository.update_trade_ticket_approval(command.ticket_id, False, "user_rejected")
             return ApprovalResult(True, "reject", command.ticket_id, f"거절 처리 완료: {command.ticket_id}")
