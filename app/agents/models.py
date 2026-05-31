@@ -29,6 +29,28 @@ class Recommendation:
 
 
 @dataclass(frozen=True)
+class MarketSnapshot:
+    symbol: str
+    name: str
+    current_price: int
+    change_rate: float | None
+    source: str
+    raw: dict
+    captured_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass(frozen=True)
+class AccountSnapshot:
+    account_no_masked: str
+    deposit_asset_amount: int
+    total_evaluation_amount: int
+    positions_count: int
+    source: str
+    raw: dict
+    captured_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass(frozen=True)
 class TradeTicket:
     ticket_id: str
     symbol: str

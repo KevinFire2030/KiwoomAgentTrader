@@ -35,3 +35,25 @@
 python3 -m app.main
 python3 -m unittest discover -s tests
 ```
+
+## 키움 REST API 읽기 검증
+
+`.env`를 채운 뒤 아래 명령으로 토큰 발급, 현재가 조회, 계좌 잔고 조회를 확인합니다. 계좌번호는 출력에서 마스킹됩니다.
+
+```bash
+python3 scripts/check_kiwoom_read_api.py
+```
+
+## 실제 읽기 데이터 기반 에이전트 workflow
+
+아래 명령은 키움 REST API에서 `498270` 현재가와 계좌 snapshot을 가져온 뒤 Chief Investment Agent workflow에 주입합니다. 현재 구현은 `paper` 모드에서만 주문 기록을 남기며, 실주문 API는 호출하지 않습니다.
+
+```bash
+python3 scripts/run_kiwoom_intraday_workflow.py 498270
+```
+
+저장되는 데이터:
+
+- `market_snapshots`: 현재가, 등락률, 원본 응답 JSON
+- `account_snapshots`: 마스킹 계좌번호, 예수금/추정자산, 평가금액, 보유종목 수
+- `agent_runs`, `trade_tickets`, `risk_reviews`: 에이전트 판단/리스크 심사 이력

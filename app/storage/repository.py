@@ -5,7 +5,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from app.agents.models import RiskReview, TradeTicket
+from app.agents.models import AccountSnapshot, MarketSnapshot, RiskReview, TradeTicket
 
 
 SCHEMA_SQL = """
@@ -33,6 +33,30 @@ CREATE TABLE IF NOT EXISTS trade_tickets (
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
     estimated_amount_krw INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS market_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    name TEXT NOT NULL,
+    current_price INTEGER NOT NULL,
+    change_rate REAL,
+    source TEXT NOT NULL,
+    raw_json TEXT NOT NULL,
+    captured_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS account_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id TEXT NOT NULL,
+    account_no_masked TEXT NOT NULL,
+    deposit_asset_amount INTEGER NOT NULL,
+    total_evaluation_amount INTEGER NOT NULL,
+    positions_count INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    raw_json TEXT NOT NULL,
+    captured_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS risk_reviews (
@@ -102,6 +126,58 @@ class TradingRepository:
     def get_trade_ticket(self, ticket_id: str) -> sqlite3.Row | None:
         with self._connect() as conn:
             return conn.execute("SELECT * FROM trade_tickets WHERE ticket_id = ?", (ticket_id,)).fetchone()
+
+    def record_market_snapshot(self, run_id: str, snapshot: MarketSnapshot) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO market_snapshots (
+                    run_id, symbol, name, current_price, change_rate, source, raw_json, captured_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    snapshot.symbol,
+                    snapshot.name,
+                    snapshot.current_price,
+                    snapshot.change_rate,
+                    snapshot.source,
+                    json.dumps(snapshot.raw, ensure_ascii=False),
+                    snapshot.captured_at.isoformat(),
+                ),
+            )
+
+    def get_latest_market_snapshot(self, symbol: str) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute(
+                "SELECT * FROM market_snapshots WHERE symbol = ? ORDER BY id DESC LIMIT 1",
+                (symbol,),
+            ).fetchone()
+
+    def record_account_snapshot(self, run_id: str, snapshot: AccountSnapshot) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO account_snapshots (
+                    run_id, account_no_masked, deposit_asset_amount, total_evaluation_amount,
+                    positions_count, source, raw_json, captured_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run_id,
+                    snapshot.account_no_masked,
+                    snapshot.deposit_asset_amount,
+                    snapshot.total_evaluation_amount,
+                    snapshot.positions_count,
+                    snapshot.source,
+                    json.dumps(snapshot.raw, ensure_ascii=False),
+                    snapshot.captured_at.isoformat(),
+                ),
+            )
+
+    def get_latest_account_snapshot(self) -> sqlite3.Row | None:
+        with self._connect() as conn:
+            return conn.execute("SELECT * FROM account_snapshots ORDER BY id DESC LIMIT 1").fetchone()
 
     def record_risk_review(self, run_id: str, review: RiskReview) -> None:
         ticket_id = review.ticket.ticket_id if review.ticket else None
