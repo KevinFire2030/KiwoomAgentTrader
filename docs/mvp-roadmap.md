@@ -118,7 +118,10 @@ Current implementation status:
 - CLI report generation: done (`scripts/analyze_trade_ticket.py`)
 - Daily Telegram post-trade digest: done (`scripts/send_daily_post_trade_digest.py`)
 - KST-day aggregation with total realized P&L, win/loss/flat counts, best/worst ticket, top lessons, and circuit breaker state: done
+- Strategy improvement lesson export loop: done (`scripts/export_strategy_lessons.py`, `docs/strategy-lessons.md`)
+- KST date/symbol/outcome grouping with source ticket IDs preserved: done
 
 Remaining:
 
-- Strategy improvement memory/export loop
+- Real fill/position sync hardening
+- Dashboard/status command for automation health

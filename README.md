@@ -181,6 +181,13 @@ python3 scripts/send_daily_post_trade_digest.py --date 2026-06-01
 
 `--no-send`는 Telegram Bot API를 호출하지 않고 출력만 검증합니다. 실제 전송 시 `TELEGRAM_BOT_TOKEN`, `KIWOOM_TELEGRAM_CHAT_ID` 또는 `TELEGRAM_CHAT_ID`, 선택적으로 `KIWOOM_TELEGRAM_THREAD_ID`가 필요합니다.
 
+누적 전략 개선 메모는 `post_trade_analyses`의 lessons를 KST 날짜/심볼/결과별로 묶어 `docs/strategy-lessons.md`에 내보냅니다. 생성 블록은 marker로 관리되어 기존 수동 메모를 보존하고, 각 lesson에는 source ticket ID가 남습니다.
+
+```bash
+python3 scripts/export_strategy_lessons.py
+python3 scripts/export_strategy_lessons.py --output docs/strategy-lessons.md
+```
+
 ## live_manual 주문 API 준비
 
 `live_manual` 모드에서 사용자 승인까지 끝난 티켓은 즉시 실주문을 내지 않고 `live_manual_ready` 상태로 전환됩니다. 주문 요청 payload는 dry-run 스크립트로 확인할 수 있습니다.

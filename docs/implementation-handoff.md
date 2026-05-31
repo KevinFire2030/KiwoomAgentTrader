@@ -234,15 +234,22 @@ Implemented:
 - Daily Telegram post-trade digest.
 - KST-date aggregation of `post_trade_analyses` with total realized P&L, `win`/`loss`/`flat` counts, ticket count, best/worst ticket, top improvement lessons, and current circuit breaker state.
 - Digest CLI with `--no-send` smoke mode and optional Telegram send using existing Telegram target environment variables.
+- Strategy improvement lesson export loop.
+- Markdown strategy lesson artifact at `docs/strategy-lessons.md`, grouped by KST date/symbol/outcome, preserving source ticket IDs.
+- Generated strategy lesson block markers preserve any manual notes outside the block.
 
 Important files:
 
 - `app/analysis/post_trade.py`
 - `app/analysis/post_trade_digest.py`
+- `app/analysis/strategy_lessons.py`
 - `scripts/analyze_trade_ticket.py`
 - `scripts/send_daily_post_trade_digest.py`
+- `scripts/export_strategy_lessons.py`
 - `tests/test_post_trade_analysis.py`
 - `tests/test_post_trade_digest.py`
+- `tests/test_strategy_lessons_export.py`
+- `docs/strategy-lessons.md`
 - `app/storage/repository.py` (`post_trade_analyses`, `PostTradeAnalysisRecord`)
 
 Usage:
@@ -250,6 +257,7 @@ Usage:
 ```bash
 python3 scripts/analyze_trade_ticket.py TT-...
 python3 scripts/send_daily_post_trade_digest.py --date 2026-06-01 --no-send
+python3 scripts/export_strategy_lessons.py
 ```
 
 Linking rule:
@@ -271,30 +279,26 @@ Linking rule:
 
 ## What remains to implement next
 
-### Next immediate task: Strategy improvement memory/export loop
+### Next immediate task: Dashboard/status command for automation health
 
 Goal:
 
-- Export accumulated post-trade lessons into a durable strategy-improvement artifact.
-
-Possible outputs:
-
-- Markdown file under `docs/strategy-lessons.md`, or
-- DB table such as `strategy_improvement_notes`, or
-- Notion/Obsidian later if user asks.
+- Add a read-only health/status command that summarizes current automation readiness without placing orders.
 
 Recommended behavior:
 
-- Group lessons by symbol/date/outcome.
-- Preserve source ticket IDs.
-- Avoid overwriting historical notes.
-- Do not store live credentials/account details.
+- Show current trading mode and whether live trading is disabled/enabled.
+- Show latest market/account snapshot timestamps if available.
+- Show runtime circuit breaker state and reason.
+- Show pending approval tickets count or latest pending ticket.
+- Show latest post-trade digest/strategy lesson export availability.
+- Keep account numbers masked and avoid credential output.
+- Do not call live order API.
 
 ### Later hardening
 
 - Real fill/position sync from Kiwoom endpoints, not just manual/simulated `RealizedPnlEvent` records.
 - More robust mapping from broker order/fill IDs to ticket IDs.
-- Dashboard/status command for current automation health.
 - CI workflow if not already present.
 - Optional live order enablement checklist, only with explicit user approval.
 - `live_auto` remains intentionally out of scope until safety review.
@@ -308,19 +312,22 @@ Use this in a fresh session after 5h usage quota resets:
 
 저장소는 /mnt/e/KiwoomAgentTrader 이고,
 현재 구현 상태는 docs/implementation-handoff.md 와 docs/mvp-roadmap.md 를 먼저 읽어서 파악해줘.
-현재 MVP6 post-trade analysis loop와 Daily Telegram post-trade digest까지 완료됐고,
-다음 단계는 Strategy improvement memory/export loop 구현이야.
+현재 MVP6 post-trade analysis loop, Daily Telegram post-trade digest, Strategy improvement lesson export까지 완료됐고,
+다음 단계는 Dashboard/status command for automation health 구현이야.
 
 요구사항:
 1. TDD로 실패 테스트 먼저 작성하고 확인
-2. 누적 post_trade_analyses 개선 메모를 날짜/심볼/결과별로 집계
-3. source ticket ID를 보존
-4. `docs/strategy-lessons.md` 같은 durable artifact 또는 DB 테이블로 누적 export
-5. 기존 일일 digest와 충돌하지 않게 읽기/내보내기 중심으로 구현
-6. 전체 테스트 실행
-7. Kiwoom read API smoke 확인
-8. README/docs 업데이트
-9. commit/push까지 완료
+2. 현재 trading mode와 live trading gate 상태 요약
+3. 최신 market/account snapshot 시각 요약
+4. runtime circuit breaker 상태/사유 요약
+5. pending approval ticket 개수 또는 최신 pending ticket 요약
+6. latest post-trade/strategy lesson artifact 상태 요약
+7. 계좌번호/credential은 출력하지 말고 마스킹/비출력 유지
+8. 실주문 API는 호출하지 않는 read-only command로 구현
+9. 전체 테스트 실행
+10. Kiwoom read API smoke 확인
+11. README/docs 업데이트
+12. commit/push까지 완료
 
 실주문 API는 호출하지 말고, read API와 로컬 DB/테스트만 사용해.
 ```
@@ -332,6 +339,7 @@ cd /mnt/e/KiwoomAgentTrader
 git status --short --branch
 python3 -m unittest discover -s tests
 python3 scripts/send_daily_post_trade_digest.py --no-send
+python3 scripts/export_strategy_lessons.py
 python3 scripts/check_kiwoom_read_api.py
 python3 scripts/run_scheduled_kiwoom_scan.py --no-send --quiet-skip > /tmp/kiwoom_quiet.out && test ! -s /tmp/kiwoom_quiet.out && echo quiet-scheduler-ok
 ```
