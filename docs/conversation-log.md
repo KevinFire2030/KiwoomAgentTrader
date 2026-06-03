@@ -74,12 +74,13 @@ Scheduler → Market Data Collector → Strategy Engine → Risk Guard → Order
 
 이 파일 외에 전체 원문 대화 로그는 `docs/telegram-thread-502-full-log.md`에 자동 저장됩니다.
 
-- Latest message ID: 5485
-- Latest message time: 2026-06-03 07:33:51 UTC+09:00
-- Synced sessions: 13
-- Synced messages: 217
+- Latest message ID: 5533
+- Latest message time: 2026-06-03 13:04:37 UTC+09:00
+- Synced sessions: 14
+- Synced messages: 221
 - Sync method: Hermes cron job `Kiwoom thread 502 auto GitHub sync`
 <!-- AUTO_SYNC_STATUS_END -->
+
 
 
 
